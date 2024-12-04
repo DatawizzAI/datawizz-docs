@@ -62,7 +62,9 @@
                 {
                     "group": "Models",
                     "pages": [
-                        "models/training-models"
+                        "models/training-models",
+                        "models/training-parameters",
+                        "models/deployment"
                     ]
                 },
                 {
