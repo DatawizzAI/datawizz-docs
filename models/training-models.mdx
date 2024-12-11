@@ -1,4 +1,36 @@
 ---
 title: 'Model Training'
-description: 'To-do add a better description'
+description: 'Train your first specialize language model with Datawizz.'
 ---
+
+This tutorial will take you through the steps to train & deploy your first specialized language model with Datawizz.
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/LbdGtvLJR9M?si=S5LYR0Nnjmdhd9UN" title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
+
+This tutorial assumes you already have a project set up on Datawizz with some logs saved which we will train the new model from.
+
+# Training a Model
+
+To train a model, head to the models section of your project and click "+ New Model":
+
+![Add Model](/images/training-models/new-model-1.png)
+
+In the new model page, follow the on-screen instructions to configure the base model, training data and training parameters:
+
+![Configure Model](/images/training-models/model-config-1.png)
+
+Once you create the model, the training process will start. You can monitor training progress and logs in the model page. Note that model training can take a few minutes to a few hours, depending on the size of the training configurations you use.
+
+![Model Training](/images/training-models/model-training-1.png)
+
+# Model Deployment
+
+Once the model is trained, you can deploy it on Datawizz to start testing it and using it in your applications. To deploy a model, click the "Deploy Model" button in the model page and select Datawizz Serveless as the provider:
+
+![Deploy Model](/images/training-models/deploy-model-1.png)
+
+Datawizz Serveless is a serverless platform that allows you to deploy and run your models without worrying about infrastructure. You can just start calling your model and pay per token without having to worry about scaling or managing servers.
+
+Once the model is deployed, you can use it in an endpoint, or select it for manual comparison in the providers section of your project:
+
+![Compare Models](/images/training-models/compare-models-1.png)

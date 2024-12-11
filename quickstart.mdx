@@ -1,86 +1,91 @@
 ---
 title: 'Quickstart'
-description: 'Start building awesome documentation in under 5 minutes'
+description: 'Start routing your LLM requests through Datawizz to collect and organize your data.'
 ---
 
-## Setup your development
+This quick getting-started tutorial will take you though the steps to start routing your LLM requests through Datawizz to collect and organize your data. Once you start collecting data on Datawizz, you can start analyzing your LLM usage, train specialized models and protect your AI models from abuse...
 
-Learn how to update your docs locally and deploy them to the public.
+<iframe width="560" height="315" src="https://www.youtube.com/embed/YWG4k5ubaLk?si=XeLNLXfUeg3_LIhV" title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
 
-### Edit and preview
+For this tutorial, we'll focus on code that uses the OpenAI SDK, like in the following code snippet (see both Python and Javascript tabs below):
 
-<AccordionGroup>
-  <Accordion icon="github" title="Clone your docs locally">
-    During the onboarding process, we created a repository on your Github with
-    your docs content. You can find this repository on our
-    [dashboard](https://dashboard.mintlify.com). To clone the repository
-    locally, follow these
-    [instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository)
-    in your terminal.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Preview changes">
-    Previewing helps you make sure your changes look as intended. We built a
-    command line interface to render these changes locally. 1. Install the
-    [Mintlify CLI](https://www.npmjs.com/package/mintlify) to preview the
-    documentation changes locally with this command: ``` npm i -g mintlify ```
-    2. Run the following command at the root of your documentation (where
-    `mint.json` is): ``` mintlify dev ```
-  </Accordion>
-</AccordionGroup>
+<CodeGroup>
 
-### Deploy your changes
+```python openai_connection.py
+from openai import OpenAI
 
-<AccordionGroup>
+client = OpenAI(
+    api_key="sk-your_openai_api_key",
+    base_url="https://api.openai.com/v1",
+)
 
-<Accordion icon="message-bot" title="Install our Github app">
-  Our Github app automatically deploys your changes to your docs site, so you
-  don't need to manage deployments yourself. You can find the link to install on
-  your [dashboard](https://dashboard.mintlify.com). Once the bot has been
-  successfully installed, there should be a check mark next to the commit hash
-  of the repo.
-</Accordion>
-<Accordion icon="rocket" title="Push your changes">
-  [Commit and push your changes to
-  Git](https://docs.github.com/en/get-started/using-git/pushing-commits-to-a-remote-repository#about-git-push)
-  for your changes to update in your docs site. If you push and don't see that
-  the Github app successfully deployed your changes, you can also manually
-  update your docs through our [dashboard](https://dashboard.mintlify.com).
-</Accordion>
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "What's the speed of light?"},
+            ],
+        }
+    ]
+)
+```
 
-</AccordionGroup>
+```javacript openai_connection.js
 
-## Update your docs
+```
+</CodeGroup>
 
-Add content directly in your files with MDX syntax and React components. You can use any of our components, or even build your own.
+# 1 - Setup your project
 
-<CardGroup>
+As a first step, you need to create a project on Datawizz. If you haven't already, [signup for Datawizz](https://www.datawizz.app/)[https://www.datawizz.app/auth/signup]. Once in the dashboard, click "+ New Project" to create a new project.
 
-<Card title="Style Your Docs" icon="paintbrush" href="/settings/global">
-  Add flair to your docs with personalized branding.
-</Card>
+# 2 - Add a provider
 
-<Card
-  title="Add API Endpoints"
-  icon="square-code"
-  href="/api-playground/configuration"
->
-  Implement your OpenAPI spec and enable API user interaction.
-</Card>
+Once you have a project, you need to connect it to your existing LLM moedel provider - like OpenAI. Providers are different platform that provide AI models you can call from your app - like OpenAI, Anthropic or AWS.
 
-<Card
-  title="Integrate Analytics"
-  icon="chart-mixed"
-  href="/analytics/supported-integrations"
->
-  Draw insights from user interactions with your documentation.
-</Card>
+In your project, head to the providers section and click add provider:
 
-<Card
-  title="Host on a Custom Domain"
-  icon="browser"
-  href="/settings/custom-domain/subdomain"
->
-  Keep your docs on your own website's subdomain.
-</Card>
+![Add Provider](/images/quickstart/add-provider-1.png)
 
-</CardGroup>
+In the new provider menu, select your provider type, and add your API key and base URL (note not to add the `/v1` at the end of the base URL):
+
+![Add Provider](/images/quickstart/add-provider-2.png)
+
+Once you add the provider, you should also add all the different models you want to use from that provider. For instance, if you're using OpenAI, you can add the `gpt-4o` model to your provider:
+
+![Add Provider Model](/images/quickstart/add-provider-model-1.png)
+
+# 3 - Create an endpoint
+
+Next up, you need to create an endpoint to route your LLM requests through. Endpoints are the integration medium between your app and the AI models. When your app calls an AI model - it'll call an endpoint. The endpoint defines the rules for routing the request to different models, and any policies that should be applied to the request (like caching or input screening).
+
+In this examole we'll have a very simple endpoint that routes all requests to the `gpt-4o` model. Head to the endpoints section and click create endpoint:
+
+![Create Endpoint](/images/quickstart/create-endpoint-1.png)
+
+Once you have created an endpoint, open it (click Manage) and click Add Upstream. Upstreams are the different moedls & providers you want to route requests to. Every upstream can have a weight (priority) and conditions to determine how requests get routed.
+In this case, we'll add the `gpt-4o` model from the OpenAI provider and leave the weight as 1 and the conditions empty - as we only have one upstream, all requests will be routed to it:
+
+![Add Upstream](/images/quickstart/add-endpoint-upstream-1.png)
+
+# 4 - Configure your app
+
+Now that you have an endpoint set up to route requests and a provider to provide the models, you can start using the endpoint in your app. In the endpoint view, you can see the changes you need to make in your code to start using the endpoint:
+
+![Code Snippet](/images/quickstart/code-snippet-1.png)
+
+Note you'll need to change three items:
+
+| Item | Description |
+| ---- | ----------- |
+| base_url | Need to set up the DW base URL to start sending traffic to Datawizz |
+| api_key | Need to input your datawizz API key (you can manage your API keys in project settings) |
+| model_id | Need to set the model ID to the ID of the endpoint you created |
+
+That's it - your requests will now be routed to Datawizz. The dashboard will show your your LLM analytics, and you can see individual logs in the logs section.
+
+# 5 - Next steps
+
+Once you have your LLM requests routed through Datawizz, you can start analyzing your LLM usage, train specialized models and protect your AI models from abuse. Check out the other sections of the documentation to learn more about the Datawizz platform and how to use it to manage your AI models.

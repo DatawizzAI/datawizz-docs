@@ -1,0 +1,42 @@
+---
+title: 'Platform Overview'
+description: 'A brief overview of the Datawizz platform'
+---
+
+This document will cover the key components of the Datawizz platform, and how they interact with each other. 
+
+## Workspaces
+Everything you do happens inside a workspace. By default, we create a personal workspace for you when you sign up. You can create additional workspaces, and invite other users to collaborate with you. Workspace users all currently have full access to make changes to the workspace and all associated projects. We are working on creating more granular roles and permissions, but for now be careful about who you invite to your workspace.
+
+Billing is done at the workspace level. You can have multiple workspaces, each with their own billing details and limits.
+
+## Projects
+Projects are the main way to organize your data. All other entities, including API keys, are managed at the project level - and project data is isolated from other projects.
+
+Projects are a great way to manage different environment or different applications alltogether.
+
+## Providers & Public Models
+Providers are different platforms that provide AI models - like OpenAI, Anthropic or AWS. Every project should be connected to at least one provider to be able to use AI models.
+
+Datawizz itself is a provider as well - every project created has a built in "Datawizz Serverless" provider which lets you use dozens of opensource AI models, as well as any models you train using the Datawizz platform.
+
+Under every provider you create in the system, you can configure the models you want to use -- for instance, if you configure an OpenAI provider, you can add the GPT-4o model to it, or with the Datawizz provider you can add a "Llama-3.2-405B" model.
+
+You can see more information about supported providers & public models [here](#todo).
+
+## Endpoints
+Endpoints are the integration medium between your app and the AI models. When your app calls an AI model - it'll call an endpoint. The endpoint defines the rules for routing the request to different models, and any policies that should be applied to the request (like caching or input screening).
+
+Endpoints can be simple - routing to a single model, or complex - load balancing between multiple models with a failover mechanism.
+
+You can learn more about endpoints and routing [here](#todo).
+
+## Inference Logs
+Every time you make an AI inference, datawizz logs the input and output for you. You can see & manage these logs in the datawizz dashboard. Datawizz goes beyond the basic logs, letting you tag them, provide metadata and add human feedback to improve future training.
+
+You can learn more about logs & data management [here](#todo).
+
+## Models
+Models in the Datawizz platform refer to the specialized models you train on your data. With datawizz, you can train & deploy specialized models for your use case, and use them in your projects.
+
+You can learn more about training models [here](#todo).

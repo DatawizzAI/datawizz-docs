@@ -36,8 +36,8 @@
             "group": "Get Started",
             "pages": [
                 "introduction",
-                "quickstart",
-                "capabilities"
+                "platform-overview",
+                "quickstart"
             ]
         },
         {
