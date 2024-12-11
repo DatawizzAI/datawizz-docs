@@ -1,4 +1,7 @@
----
-title: 'Training Parameters'
-description: 'To-do add a better description'
----
+| Title | Description | Data Type | Default |
+|---|---|---|---|
+| Maximal input size | Defines the maximum number of tokens in each training sample. | Commonly 128 to 4096 (model-dependent). | Calculated automatically according to the size of the input logs. |
+| Validation split ratio | The portion of the training data reserved for validation during training. | A number between 0.01 and 0.9. | 0.2 |
+| Max samples | The number of data points from the dataset used for training. | Any positive integer up to the dataset size. | Full dataset. |
+| Training epochs | Indicates the number of complete passes through the training dataset. |Integer between 1 and 100. | 3 |
+| Learning rate | Specifies the step size for updating model weights during training. |Typically between 1e-5 and 1e-1. | 2e-4 |
