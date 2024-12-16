@@ -49,7 +49,13 @@
                         "logs/recording-requests",
                         "logs/supported-llms",
                         "logs/metadata-and-tagging",
-                        "logs/feedback"
+                        "logs/feedback",
+                        {
+                            "group": "Working with Libraries",
+                            "pages": [
+                                "logs/libraries/vercel-ai-sdk"
+                            ]
+                        }
                     ]
                 },
                 {

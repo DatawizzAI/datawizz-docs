@@ -1,0 +1,74 @@
+---
+title: 'Vercel AI SDK'
+description: 'Using Datawizz with Vercel AI SDK'
+---
+
+The [Vercel AI SDK](https://sdk.vercel.ai) is a powerful framework for creating AI-powered applications, making it easy to build AI features with streaming, function-calling and other capabilities built in. You can easily integrate Datawizz with the Vercel AI SDK to create powerful AI applications.
+
+The integration with Datawizz will use the AI SDK's OpenAI provider and Datawizz's OpenAI-compatible API, so for the most part, this will look a lot like using OpenAI with the Vercel AI SDK. You can see the reference for the [OpenAI provider](https://sdk.vercel.ai/providers/ai-sdk-providers/openai) for additional information.
+
+## Connecting to Datawizz
+
+Assuming you already have the rest of the SDK installed, you'll need to install the OpenAI provider for the Vercel AI SDK. You can do this by running the following command:
+
+<CodeGroup>
+
+```bash pnpm
+pnpm add @ai-sdk/openai
+```
+
+```bash npm
+npm install @ai-sdk/openai
+```
+
+```bash yarn
+yarn add @ai-sdk/openai
+```
+</CodeGroup>
+
+Once you have the SDK installed, you can connect to Datawizz by creating a new OpenAI client with your Datawizz API key and base URL. Here's an example of how you might do this:
+
+```javascript
+import { createOpenAI } from '@ai-sdk/openai';
+
+const openai = createOpenAI({
+    apiKey: process.env.DW_API_KEY, // <- Your Datawizz API key
+    baseURL: process.env.DW_PROJECT_URL // <- Your Datawizz project URL
+});
+```
+
+Finally, you can instanciate a model using the openai client and the Datawizz endpoint ID you wish to connect to:
+    
+```javascript
+const model = openai(process.env.DW_ENDPOINT_ID); // <- Your Datawizz endpoint ID
+```
+
+## Using Datawizz with the Vercel AI SDK
+You can now use the model to generate text, stream outputs and perform any other action supported by the Vercel AI SDK. Here's an example of how you might generate text using the model:
+
+```javascript
+const { text } = await generateText({
+  model: model,
+  prompt: 'Write a vegetarian lasagna recipe for 4 people.',
+});
+```
+
+## Adding Metadata
+Metadata is crucial for tracking the performance of your models and organizing your logs better - Datawizz creates tags from your metadata, and allows you to route requests and train models based on these tags. You can add metadata to your requests using the `experimental_providerMetadata` option in the Vercel AI SDK. Here's an example of how you might add metadata to your request:
+
+```javascript
+const { text } = await generateText({
+    model: model,
+    prompt: 'Write a vegetarian lasagna recipe for 4 people.',
+    experimental_providerMetadata: {
+        openai: {
+            store: true,
+            metadata: {
+                type: "recipe",
+                language: "en",
+                tier: 'free'
+            }
+        }
+    },
+});
+```
