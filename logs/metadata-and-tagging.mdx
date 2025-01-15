@@ -1,4 +1,104 @@
 ---
 title: 'Metadata and Tagging'
-description: 'To-do add a better description'
+description: 'Add and manage metadata and tags for logs'
 ---
+
+Metadata and tags are a key part of organizing your LLM data to improve model training and request routing. In the datawizz platform, every inference log has attached metadata and tags. These tags can be used to filtrt logs to train specific models, and to route requests to different models.
+
+## Metadata
+
+When sending chat completion requests, you can attach metadata to the request. This metadata will be stored with the log, and tags will be auto-generated based on it.
+
+### Adding metadata - OpenAI Compatible API
+
+When sending a chat completion request via the OpenAI compatible API, you can add metadata to the request. Simply add a `metadata` field to the request with the metadata you want to attach to the log.
+
+<CodeGroup>
+```js openai_connection.js
+import OpenAI from "openai";
+const openai = new OpenAI({
+    apiKey: "sk-*******************",
+    baseUrl: "https://gw.datawizz.app/____________/openai/v1"
+});
+
+const completion = await openai.chat.completions.create({
+    model: "*******************",
+    messages: [
+        { role: "user", content: "Write a haiku about recursion in programming." },
+    ],
+    metadata: {
+        "language": "en",
+        "task": "summarize",
+        "domain": "programming",
+        "subscription_tier": "pro"
+    }
+});
+
+```
+
+```py openai_connection.py
+from openai import OpenAI
+
+client = OpenAI(
+    api_key= "sk-*******************",
+    base_url= "https://gw.datawizz.app/____________/openai/v1"
+)
+
+response = client.chat.completions.create(
+    model="*******************",
+    messages=[
+        { "role": "user", "content": "Write a haiku about recursion in programming." },
+    ],
+    metadata= {
+        "language": "en",
+        "task": "summarize",
+        "domain": "programming",
+        "subscription_tier": "pro"
+    }
+)
+```
+</CodeGroup>
+
+### Auto-generated tags
+
+When you add metadata to a log, tags will be auto-generated based on the metadata. These tags can be used to filter logs in the dashboard, and to route requests to different models. Only the top-level keys in the metadata will be used as tags.
+
+For instance, in the example above, the following tags will be auto-generated: `language:en`, `task:summarize`, `domain:programming`, `subscription_tier:pro`. 
+
+Additionaly, any metadata keys with null values will just be added as a tag without a value (e.g. ```{"test": null}``` will generate the tag `test`).
+
+## When to send metadata
+
+Generally speaking, you should send as much metadata as possible with your requests. This metadata can be used to filter logs for training specific models, and to route requests to different models based on the metadata. 
+
+When transitioning to smaller models, it is often advantageous to create hyper-speicalized models that are trained for specific tasks. In this case, metadata can be used to filter logs for training these specialized models & routing between them.
+
+Some generally useful metadata to send with requests include:
+- `task`: The task the request is for (e.g. summarization, translation, etc.) if your application uses multiple tasks. These should roughly corrospond to the different prompt templates you use.
+- `language`: The language of the request content (if you support multiple languages).
+- `domain`: The domain of the request content (e.g. programming, finance, etc.) if you support multiple domains.
+- `subscription_tier`: The subscription tier of the user making the request (e.g. free, pro, enterprise) if you have different tiers of service - this can be useful for routing requests to different models based on the user's subscription level.
+
+## Metadata to avoid
+
+We generally recommend avoiding sending personally identifiable information (PII) in metadata. This includes things like names, email addresses, phone numbers, etc. This information can be sensitive and should be handled with care. If you need to store this information, we recommend storing it in a separate database and linking it to the log id.
+
+## Adding tags through the dashboard
+
+You can also add metadata to logs through the dashboard. To do so, open any log in the logs section and click the "+" button in the metadata section. Here you can add key-value pairs of metadata to the log. You can also right-click on any existing tag to remove it from the log. Note that editing tags via the UI does not affect the original metadata sent with the request, only the generated tags.
+
+![Add Metadata](/images/metadata-and-tagging/add-tags-1.png)
+
+You can also select multiple logs and add metadata to all of them at once. This can be useful when you want to add metadata to a batch of logs at once.
+
+## Adding tags programmatically (via API)
+
+You can also add metadata to logs programmatically via the Datawizz API. To do so, you can use the `PATCH /log/:log_id` endpoint with the `metadata` or `metadata_tags` field set to the metadata or tags you want to add. 
+
+Note that when updating metadata via the API, the new metadata will replace the existing metadata on the log. If you want to add to the existing metadata, you should include all the existing metadata in the request.
+
+Additionally, updating the metadata via the API does not affect the tags generated from the metadata. The tags are generated when the log is created and are not updated when the metadata is updated. If you want to update the tags, you should update the `metadata_tags` field.
+
+<Card title="PATCH /log/:log_id" icon="link" href="/api-reference/endpoint/patch_log">
+  View the API reference for the PATCH /log/:log_id endpoint
+</Card>

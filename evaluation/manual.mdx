@@ -1,4 +1,22 @@
 ---
 title: 'Manual Evaluation'
-description: 'To-do add a better description'
+description: 'Learn how to compare multiple models side-by-side and evaluate their performance'
 ---
+
+Evaluating the performance of your AI models is a crucial step in the model development process. Datawizz provides a simple way to compare multiple models side-by-side and evaluate their performance. This can help you identify the best performing model and make informed decisions about which model to deploy.
+
+## Comparing models
+
+The datawizz platform has a convinient UI for sending requests to multiple models and comparing their responses side-by-side. You can use this to compare both public models from providers like OpenAI and custom models trained on your own data.
+
+<Note>Please noe that custom trained models must be deployed before they can be evaluated. Please deploy your model to Datawizz after training before proceeding with the evaluation.</Note>
+
+![Model Comparison](/images/evaluation/manual-compare-models-1.mp4)
+
+To evaluate models:
+
+1. Head pover to the providers section in the Datawizz dashboard.
+2. Select the models you want to compare under the different providers. You can select multiple models from the same provider or different providers.
+3. Click the "Compare" button on the top right corner of the page.
+
+In the comparison view, you can either create your own messages, or open the "Saved Prompts" drawer to use inputs fron your existing request logs.

@@ -1,195 +1,152 @@
 {
-  "openapi": "3.0.1",
-  "info": {
-    "title": "OpenAPI Plant Store",
-    "description": "A sample API that uses a plant store as an example to demonstrate features in the OpenAPI specification",
-    "license": {
-      "name": "MIT"
-    },
-    "version": "1.0.0"
-  },
-  "servers": [
-    {
-      "url": "http://sandbox.mintlify.com"
-    }
-  ],
-  "security": [
-    {
-      "bearerAuth": []
-    }
-  ],
-  "paths": {
-    "/plants": {
-      "get": {
-        "description": "Returns all plants from the system that the user has access to",
-        "parameters": [
-          {
-            "name": "limit",
-            "in": "query",
-            "description": "The maximum number of results to return",
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Plant response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Plant"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Unexpected error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "description": "Creates a new plant in the store",
-        "requestBody": {
-          "description": "Plant to add to the store",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NewPlant"
-              }
-            }
-          },
-          "required": true
+    "openapi": "3.0.1",
+    "info": {
+        "title": "Datawizz",
+        "description": "The Datawizz API",
+        "license": {
+            "name": "MIT"
         },
-        "responses": {
-          "200": {
-            "description": "plant response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Plant"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "unexpected error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
+        "version": "1.0.0"
     },
-    "/plants/{id}": {
-      "delete": {
-        "description": "Deletes a single plant based on the ID supplied",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "ID of plant to delete",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Plant deleted",
-            "content": {}
-          },
-          "400": {
-            "description": "unexpected error",
-            "content": {
-              "application/json": {
+    "servers": [
+        {
+            "url": "https://www.datawizz.app/api"
+        }
+    ],
+    "security": [
+        {
+            "bearerAuth": []
+        }
+    ],
+    "paths": {
+        "/log/{id}": {
+            "patch": {
+            "description": "Edit an existing log in the system",
+            "parameters": [
+                {
+                "name": "id",
+                "in": "path",
+                "description": "The ID of the log being edited. This will be included in the chat completion response",
+                "required": true,
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                    "type": "string"
                 }
-              }
-            }
-          }
-        }
-      }
-    }
-  },
-  "components": {
-    "schemas": {
-      "Plant": {
-        "required": [
-          "name"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "description": "The name of the plant",
-            "type": "string"
-          },
-          "tag": {
-            "description": "Tag to specify the type",
-            "type": "string"
-          }
-        }
-      },
-      "NewPlant": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/Plant"
-          },
-          {
-            "required": [
-              "id"
+                }
             ],
-            "type": "object",
-            "properties": {
-              "id": {
-                "description": "Identification number of the plant",
-                "type": "integer",
-                "format": "int64"
-              }
+            "requestBody": {
+                "description": "UpdateLog object that needs to be updated",
+                "required": true,
+                "content": {
+                "application/json": {
+                    "schema": {
+                    "$ref": "#/components/schemas/UpdateLog"
+                    }
+                }
+                }
+            },
+            "responses": {
+                "200": {
+                "description": "Ok response",
+                "content": {
+                    "text/plain": {
+                    "schema": {
+                        "type": "string",
+                        "example": "Ok"
+                    }
+                    }
+                }
+                },
+                "404": {
+                "description": "Log not found",
+                "content": {
+                    "text/plain": {
+                    "schema": {
+                        "type": "string",
+                        "example": "Log not found"
+                    }
+                    }
+                }
+                },
+                "401": {
+                "description": "Unauthorized",
+                "content": {
+                    "text/plain": {
+                    "schema": {
+                        "type": "string",
+                        "example": "Invalid API Key"
+                    }
+                    }
+                }
+                }
             }
-          }
-        ]
-      },
-      "Error": {
-        "required": [
-          "error",
-          "message"
-        ],
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "message": {
-            "type": "string"
-          }
+            }
         }
-      }
     },
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer"
-      }
+    "components": {
+        "schemas": {
+            "UpdateLog": {
+                "type": "object",
+                "properties": {
+                    "input": {
+                        "$ref": "#/components/schemas/Json",
+                        "description": "The input data for the log"
+                    },
+                    "meta_tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "The meta tags for the log - this value will override the existing meta tags"
+                    },
+                    "metadata": {
+                        "$ref": "#/components/schemas/Json",
+                        "nullable": true,
+                        "description": "The metadata for the log - this value will override the existing metadata"
+                    },
+                    "output": {
+                        "$ref": "#/components/schemas/Json",
+                        "description": "The output data for the log"
+                    },
+                    "quality_feedback": {
+                        "type": "string",
+                        "description": "The quality feedback for the log - an improvement suggestion for the generated output"
+                    },
+                    "quality_rating": {
+                        "type": "string",
+                        "enum": [
+                            "👍",
+                            "👎"
+                        ],
+                        "description": "The quality rating for the log - a rating of the generated output - either 👍 or 👎"
+                    }
+                }
+            },
+            "Json": {
+                "type": "object",
+                "additionalProperties": true
+            },
+            "Error": {
+                "required": [
+                    "error",
+                    "message"
+                ],
+                "type": "object",
+                "properties": {
+                    "error": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "message": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer"
+            }
+        }
     }
-  }
 }

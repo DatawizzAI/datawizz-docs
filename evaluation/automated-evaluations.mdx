@@ -1,0 +1,34 @@
+---
+title: 'Automated Evaluations'
+description: 'Evaluate AI models automatically using Datawizz'
+---
+
+Datawizz has a powerfull evaluations feature which lets you evaluate the performance of multiple models using your real data, and based on several evaluation metrics. This can help you identify the best performing model and make informed decisions about which model to deploy.
+
+Evaluations are critical not only for evaluating custom trained models, but also for understanding the performance of various public models from providers like OpenAI. When newer models are relased, it's cruicial to evaluate them on your data to understand how they perform compared to your existing models. New models are not always betetr for every use case.
+
+## Creating an evaluation
+
+To create an evaluation, head over to the evaluations section in the Datawizz dashboard. Here you can create a new evaluation by clicking the "New Evaluation" button.
+
+![New Evaluation](/images/evaluation/create-evaluation-1.png)
+
+Here you'll need to configure your evaluation with the following settings:
+
+- **Name**: A name for your evaluation. This is for your reference and will be displayed in the dashboard.
+- **Models**: The models you want to evaluate. You can select multiple models from the same provider or different providers. (note that models you train must be deployed before they can be evaluated)
+- **Data**: Select the logs you want to use for evaluation. You can use tags and other filters to select the logs you want to use.
+    - If you are training custom models, you may want to reserve some logs for evaluation to ensure you are not testing on the same data you trained on. You can do this by tagging some logs with `test` and excluding them from the training data when you initiate a model training.
+    - If you have feedback for your logs, you should filter for positive (👍) logs to evaluate against.
+- **Maximum Sample Count**: The maximum number of samples to use for evaluation. This is useful if you have a large dataset and want to limit the number of samples used for evaluation.
+<Warning>When evaluating different models, a request is made to each model for each log in the evaluation data. You bear the cost for these requests, so be sure to set a reasonable maximum sample count to avoid excessive usage.</Warning>
+- **Evaluation Function**: how to compare different results. All evaluations treat the original logs output as the baseline, and compare the outputs of the models against this baseline. You can choose from the following evaluation functions:
+    - **String Equality**: Compares the string output of the models against the original log output. This is useful for simple classification tasks where exact string matches are important.
+    - **ROUGE**: Compares the outputs of the models against the original log output using the ROUGE metric. This is useful for tasks like summarization where the output is a summary of the input.
+    - **LLM as Judge**: Compares the outputs of the models against the original log output using a language model as a judge. This is useful for tasks like conversation where the output is a response to a user query.
+
+## Viewing evaluation results
+
+Once you've created an evaluation, you can view the results in the evaluation details page. Here you'll see a summary of the evaluation, including the evaluation function used, the number of samples evaluated, and the evaluation metrics. You will also be able to see individual responses from each model and compare them side-by-side.
+
+![Evaluation Results](/images/evaluation/evaluation-results-1.png)
