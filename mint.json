@@ -62,7 +62,8 @@
                     "group": "Endpoints",
                     "pages": [
                         "endpoints/routing",
-                        "endpoints/policies"
+                        "endpoints/policies",
+                        "endpoints/structured-outputs"
                     ]
                 },
                 {

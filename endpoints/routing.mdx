@@ -1,4 +1,45 @@
 ---
 title: 'Routing'
-description: 'To-do add a better description'
+description: 'Learn how to route requests to different models based on custom logic'
 ---
+
+Datawizz enables you to route your requests to different models (and even different providers) to ensure every request is handled by the right model. This can be useful when training Specialzied Models for specific tasks - but we even find that with LLMs, different models can perform better on different types of inputs. So even if you aren't deploying custom models, you can still benefit from routing requests to different models.
+
+Routing logic is managed at the endpoint level - your code calls an **endpoint**, which has one or more **upstreams** that it routes requests to. Each upstream can be a different model, and you can configure the routing logic to send requests to the right model based on the request content.
+
+## Load Balancing Multiple Models
+
+When you add an upstream to an endpoint, you can specify it's weight. The weight determines how often requests are sent to that upstream. For example, if you have two upstreams with weights 1 and 2, then 1/3 of the requests will be sent to the first upstream and 2/3 to the second upstream.
+
+This can be useful for load balancing between models, or for A/B testing different models to see which performs better. It can also be useful for gradually rolling out a new model - you can start with a low weight and gradually increase it as you gain confidence in the new model.
+
+The system will still note the actual model that served the request, so you can analyze the performance of each model separately or train new models based on the performance of the existing models.
+
+![Load Balancing](/images/endpoints/routing-weight-1.png)
+
+## Routing Requests Based on tags
+
+When you add an upstream to an endpoint, you can specify a tag filter. This alows you to tell Datawizz to only send requests to that endpoint if they contain (or don't contain) a specific tag. This can be useful for routing requests to different models based on the content of the request.
+
+Some example scenarios where this can be useful:
+- Domain specific models: You may have a model that is trained on a specific domain, and you want to route requests to that model only if the request contains content from that domain.
+- Language specific models: You may have a model that is trained on a specific language, and you want to route requests to that model only if the request is in that language.
+- Task specific models: You may have a model that is trained on a specific task, and you want to route requests to that model only if the request is for that task.
+- Subscription tier based routiog - you may have different models for different subscription tiers, and you want to route requests to the right model based on the subscription tier of the user.
+
+To configure a tag filter, simply specify the tags to include/exclude the upstream for when you add the upstream.
+
+![Load Balancing](/images/endpoints/routing-tags-1.png)
+
+<Note>Load balancing weights and tag filters can be used together. If you have multiple upstreams with different weights and tag filters, the system will first filter the upstreams based on the tag filters, and then apply the load balancing weights to the applicable upstreams.</Note>
+
+## Model Fallbacks
+
+Datawizz can help you improve reliability by using fallbacks - if the primary model fails to respond, Datawizz will automatically send the request to the fallback model. This can be useful for ensuring that requests are always handled, even if one of your models is down.
+
+To leverage fallbacks, turn on the fallbacks option at the endpoint level and ensure there is more than one upstream. When a request comes in, Datawizz will select the first upstream based on weights. If the first upstream fails to respond, Datawizz will automatically send the request to the next upstream, and so forth until a response is received. If all upstreams fail to respond, Datawizz will return an error to the client.
+
+<Note>You can define upstreamd with weight 0. These will never get selected as a primary - but only as a fallback after other options have failed.</Note>
+
+![Load Balancing](/images/endpoints/routing-fallback-1.png)
+
