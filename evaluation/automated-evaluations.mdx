@@ -22,10 +22,43 @@ Here you'll need to configure your evaluation with the following settings:
     - If you have feedback for your logs, you should filter for positive (👍) logs to evaluate against.
 - **Maximum Sample Count**: The maximum number of samples to use for evaluation. This is useful if you have a large dataset and want to limit the number of samples used for evaluation.
 <Warning>When evaluating different models, a request is made to each model for each log in the evaluation data. You bear the cost for these requests, so be sure to set a reasonable maximum sample count to avoid excessive usage.</Warning>
-- **Evaluation Function**: how to compare different results. All evaluations treat the original logs output as the baseline, and compare the outputs of the models against this baseline. You can choose from the following evaluation functions:
-    - **String Equality**: Compares the string output of the models against the original log output. This is useful for simple classification tasks where exact string matches are important.
-    - **ROUGE**: Compares the outputs of the models against the original log output using the ROUGE metric. This is useful for tasks like summarization where the output is a summary of the input.
+- **Evaluation Function**: how to compare different results. All evaluations treat the original logs output as the baseline, and compare the outputs of the models against this baseline. **All scores range from 0 to 1, where 1 indicates high similarity or accuracy, and 0 indicates poor performance.** You can choose from the following evaluation functions:
+    - **String Equality**: Compares whether the model output **exactly matches** the baseline. This is useful for simple classification tasks where exact string matches are important.
+        - **1** = Perfect match  
+        - **0** = No match  
+        - Supports **case-insensitive comparison** and **prefix matching**.  
+    - **ROUGE (Recall-Oriented Understudy for Gisting Evaluation)**: Compares the outputs of the models against the original log output using the **ROUGE metric**.  
+        - Returns the score and F-measures for various ROUGE types (e.g., ROUGE-1, ROUGE-2, ROUGE-L).
+        - Useful for **summarization and text generation**. 
+    - **wer (Word Error Rate)**: Measures the word-level edit distance between the baseline and the new output. 
+        - **Similarity Formula**: **1 - WER** (higher is better).
+        - Useful for **speech recognition** and **transcription evaluation**. 
+    - **cer (Character Error Rate):**: Measures the character-level edit distance between the baseline and the new output.   
+        - **Similarity Formula**: **1 - CER** (higher is better).
+        - Useful for **OCR (Optical Character Recognition) evaluation**. 
+    - **BLEU (Bilingual Evaluation Understudy)**: Evaluates n-gram precision between the model output and the baseline.
+        - Returns the BLEU score along with precision values for various n-grams (1 to 4).
+        - Commonly used for machine translation evaluation.
+Higher scores indicate better alignment with the reference. 
+    - **METEOR (Metric for Evaluation of Translation with Explicit ORdering)**: Improves BLEU by considering synonyms, stemming, and word order.  
+        - Useful for translation quality assessment with more flexibility. 
+    - **BERTScore**: Computes **semantic similarity** between model output and baseline using BERT embeddings.  
+        - Useful for **paraphrase detection** and **meaning-based comparison**.  
+        - Returns the F1 score computed using BERT-based embeddings
+    - **SacreBLEU**: A **standardized BLEU implementation** with improved reproducibility.   
+        - Ideal for benchmarking translation models. 
+        - Computes the BLEU score with a specific reference corpus using a standard, reproducible method.
+    - **CHRF (Character-level F-score)**: Computes the character-level F-score between the baseline and the new output.     
+        - Effective for morphologically rich languages and short text evaluation.
+    - **JSON Structure Comparison**: Checks **if JSON structure and values** match the baseline. Evaluates:  
+        - Key Overlap Score  
+        - Value Overlap Score  
+        - Overall Match Score   
+        - Valid JSON objects
+        - Json completeness (the JSON objects have the same set of keys)
     - **LLM as Judge**: Compares the outputs of the models against the original log output using a language model as a judge. This is useful for tasks like conversation where the output is a response to a user query.
+
+Most evaluation functions support preprocessing texts based on user-specified configurations (e.g., case-insensitivity, trimming, extra spaces removal), which helps normalize input before comparison. Where these configurations aren't explicitly required by the evaluation metric, they do not affect the results, as the method overcomes these preprocessing issues by default.
 
 ## Viewing evaluation results
 
