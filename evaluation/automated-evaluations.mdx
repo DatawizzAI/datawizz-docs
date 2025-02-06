@@ -57,6 +57,60 @@ Higher scores indicate better alignment with the reference.
         - Valid JSON objects
         - Json completeness (the JSON objects have the same set of keys)
     - **LLM as Judge**: Compares the outputs of the models against the original log output using a language model as a judge. This is useful for tasks like conversation where the output is a response to a user query.
+        - Select a task to get a task-relevant prompt templates for evaluation. You can further refine the prompt by providing examples, specifying category names, or adding other specifications. The provided prompt templates are:
+        
+            - **Question Answering:**  
+              ```  
+              Evaluate how well the candidate answered the input question/instruction given the baseline answer.  
+              
+              Input: {{input}}  
+              Candidate: {{output}}  
+              Baseline: {{baseline_output}}  
+              ```  
+            - **Classification:**  
+              ```  
+              Given the user input below, evaluate if the candidate output is a correct classification according to the baseline output classification.  
+              
+              Input: {{input}}  
+              Candidate: {{output}}  
+              Baseline: {{baseline_output}}  
+              ```  
+        
+            - **Summarization:**  
+              ```  
+              Evaluate how well the candidate summarized the input given the baseline summary.  
+              
+              Input: {{input}}  
+              Candidate: {{output}}  
+              Baseline: {{baseline_output}}  
+              ```  
+        
+            - **Entity Extraction:**  
+              ```  
+              Evaluate how well the candidate extracted the requested elements (as requested in the input) given the baseline extracted entities.  
+              
+              Input: {{input}}  
+              Candidate: {{output}}  
+              Baseline: {{baseline_output}}  
+              ```  
+        
+            - **Code Generation:**  
+              ```  
+              Evaluate how well the candidate generated the requested code (as requested in the input) given the baseline code.  
+              
+              Input: {{input}}  
+              Candidate: {{output}}  
+              Baseline: {{baseline_output}}  
+              ```  
+        
+            - **Generic:**  
+              ```  
+              Evaluate how similar the candidate output is to the baseline output.  
+              
+              Input: {{input}}  
+              Candidate: {{output}}  
+              Baseline: {{baseline_output}}  
+              ```                                                                                                                                                                                                                
 
 Most evaluation functions support preprocessing texts based on user-specified configurations (e.g., case-insensitivity, trimming, extra spaces removal), which helps normalize input before comparison. Where these configurations aren't explicitly required by the evaluation metric, they do not affect the results, as the method overcomes these preprocessing issues by default.
 
