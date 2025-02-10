@@ -72,7 +72,7 @@
                     "pages": [
                         "models/training-models",
                         "models/training-parameters",
-                        "models/deployment"
+                        "models/datasets"
                     ]
                 },
                 {

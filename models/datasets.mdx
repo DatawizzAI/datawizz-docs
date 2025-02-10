@@ -1,0 +1,49 @@
+---
+title: 'Datasets'
+description: 'Importing and managing datasets in Datawizz'
+---
+
+Datawizz let's you create datasets of LLM logs - either from requests recorded on DataWizz endpoints or from logs uploaded to the platform. You can use these datasets to train and evaluate logs.
+
+Datasets can be helpful for creating consistent sets of data to train with, or to import existing data from other systems.
+
+## Creating a Dataset
+
+To create a dataset, navigate to the `Datasets` tab in the Datawizz dashboard and click on the `Create Dataset` button. You can choose a name for your new dataset and a description to help you remember what it's for.
+
+![Datasets](/images/datasets/datasets-1.png)
+
+## Importing Datawizz Logs
+
+Once inside your dataset, you can click `Import Logs` to import logs from Datawizz endpoints. You can use the filters there to narrow down the logs that'll be imported. 
+
+![Datasets](/images/datasets/datasets-logs-1.png)
+
+## Importing Logs from a CSV File
+
+You can also import logs from a CSV file. Click on `Import CSV` and select a file to upload. The file must include `input` and `output` columns, where `input` is the message(s) sent to the model and `output` is the response.
+
+Datawizz support two formats for the `input` and `output` columns:
+
+- **text** - in this mode, the column should contain the raw text of the message. Datawizz will automaticall format the input message with the role 'user' and the output message with the role 'assistant'.
+- **full** - in this mode, the column should contain the full JSON object of the message. This allows you to specify the role and other metadata for the message.
+    - The input column should be a JSON array of objects, where each object has a `content` field and a `role` field. For example:
+    ```json
+    [
+        {"content": "You are a ...", "role": "assistant"},
+        {"content": "Hi", "role": "user"}
+    ]
+    ```
+    - The output column should be a JSON object with a `content` field and a `role` field. For example:
+    ```json
+    {"content": "I am a ...", "role": "assistant"}
+    ```
+
+![Datasets](/images/datasets/datasets-csv-1.png)
+
+## Importing Logs from Other systems
+
+Here are some ways to import logs from other systems. If you are using a system that is not listed here, you can still import logs by converting them to the CSV format described above - please share your use case with us so we can better document the process!
+
+### Humanloop
+We have created a notebook that exports the logs from [Humanloop](https://humanloop.com) to a Datawizz dataset CSV file. You can find the notebook [here](https://colab.research.google.com/drive/1lafP6s72-V1ntc7SZhgMNQSvFKH5TJK8?usp=sharing).
