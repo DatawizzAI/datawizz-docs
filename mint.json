@@ -85,6 +85,17 @@
             ]
         },
         {
+            "group": "Guides",
+            "pages": [
+                {
+                    "group": "Integrations",
+                    "pages": [
+                        "integrations/langfuse"
+                    ]
+                }
+            ]
+        },
+        {
             "group": "API Documentation",
             "pages": [
                 "api-reference/introduction"

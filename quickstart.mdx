@@ -15,12 +15,12 @@ For this tutorial, we'll focus on code that uses the OpenAI SDK, like in the fol
 from openai import OpenAI
 
 client = OpenAI(
-    api_key="sk-your_openai_api_key",
-    base_url="https://api.openai.com/v1",
+    api_key="sk-your_openai_api_key", # <--- your datawizz project API key
+    base_url="https://gw.datawizz.app/**************/openai/v1", # <--- your datawizz project base URL
 )
 
 response = client.chat.completions.create(
-    model="gpt-4o",
+    model="********",  # <--- this is the DataWizz Endpoit you are routing to,
     messages=[
         {
             "role": "user",
@@ -32,8 +32,19 @@ response = client.chat.completions.create(
 )
 ```
 
-```javacript openai_connection.js
+```js openai_connection.js
+import OpenAI from "openai";
+const openai = new OpenAI({
+    apiKey: "sk-your_openai_api_key", // <--- your datawizz project API key
+    baseUrl: "https://gw.datawizz.app/**************/openai/v1", // <--- your datawizz project base URL
+});
 
+const completion = await openai.chat.completions.create({
+    model: "********", // <--- this is the DataWizz Endpoit you are routing to
+    messages: [
+        { role: "user", content: "Write a haiku about recursion in programming." },
+    ],
+});
 ```
 </CodeGroup>
 
