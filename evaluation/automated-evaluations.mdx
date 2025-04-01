@@ -56,6 +56,69 @@ Higher scores indicate better alignment with the reference.
         - Overall Match Score   
         - Valid JSON objects
         - Json completeness (the JSON objects have the same set of keys)
+    - **JSON List Comparison**: Compares lists of JSON objects by matching items using one or more unique identifiers (id_keys). This evaluation is especially useful in tasks like multi-label classification, structured entity extraction, and other scenarios where outputs are arrays or dictionaries of identifiable elements.
+        - 🔍 What it Measures:
+            - **Weighted Precision / Recall:** Measures overall accuracy while accounting for how frequently each item or label appears in the data.  
+                - **Weighted Precision** rewards correct predictions proportionally to how common a label is.
+                - **Weighted Recall** measures how well the model recovers important/common labels.  
+          This makes it ideal for imbalanced datasets where some labels appear more often than others.
+            - **Exact Match Ratio:** Proportion of objects that match exactly (based on the fields in `id_keys`).
+            - **Hamming Distance:** Average difference across key-value pairs in matched objects. Lower is better.
+            - **Score:** The final score is calculated as the average of **weighted precision** and **weighted recall**.
+        - 📥 Supported Input Formats:
+            - The `JSON List Comparison` metric supports two types of structured outputs:
+                - **Flat JSON List**
+                    
+                    A simple list of objects where each object represents a classification, entity, or data point:
+                    
+                    ```json
+                    [
+                      { "label": "sports", "confidence": 0.92 },
+                      { "label": "health", "confidence": 0.81 }
+                    ]
+                    ```
+                - **Wrapped Dictionary with Keyed List**
+                    
+                    A dictionary where the list of objects is nested under a specific key. This is often used when the model returns structured fields in a top-level wrapper:
+                    
+                    ```json
+                    {
+                      "labels": [
+                        { "label": "sports" },
+                        { "label": "finance" }
+                      ]
+                    }
+                    ```
+        - ⚙️ Configuration Options
+            - **`id_keys`** (required):  
+              Comma-separated list of key names used to uniquely identify and match items between the baseline and model outputs.  
+              Example: `"label"` or `"id,name"`
+            - **`remove_json_code_blocks`** *(optional, default: `true`)*:  
+              If enabled, automatically removes markdown-style code block wrappers (like ```json) from the model's output before parsing it as JSON.
+            - **Valid JSON required**:  
+              The output must be syntactically valid JSON. Malformed outputs will cause the metric to return a score of `0` with `"json_valid": false`.
+        - ✅ Best Practice: Use a JSON Schema
+            To ensure model outputs are consistently structured, it's strongly recommended to set the `json_schema` parameter for each model being evaluated.
+            
+            Providing a schema helps:
+            - Ensure the model returns valid JSON.
+            - Align output structure with evaluation expectations.
+            - Reduce inconsistencies or formatting issues.
+            
+            **Example schema:**
+            ```json
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "label": { "type": "string" },
+                  "confidence": { "type": "number" }
+                },
+                "required": ["label"]
+              }
+            }
+            ```
     - **LLM as Judge**: Compares the outputs of the models against the original log output using a language model as a judge. This is useful for tasks like conversation where the output is a response to a user query.
         - Select a task to get a task-relevant prompt templates for evaluation. You can further refine the prompt by providing examples, specifying category names, or adding other specifications. The provided prompt templates are:
         
