@@ -1,0 +1,55 @@
+---
+title: 'Model Deployment'
+description: 'Deploy your models to various providers.'
+---
+
+Once you train SLMs on the Datawizz platform, you must first deploy them to a provider to start evaluating them & conntecting them to endpoints. You can always download the model weights and manually deploy them to any inference provider. Datawizz makes it simple to deploy to various providers with automated "one clicke" deployments.
+
+We are actively working on adding more providers. If you have a specific provider in mind, please reach out to us and we will prioritize it.
+
+<Warning>
+Before deploying to any third party providers, please check their pricing as deployments often incurr charges. The models will be deployed to your account, and you will be responsible for any charges incurred.
+</Warning>
+
+## Datawizz Serverless
+Datawizz offers a serverless deployment option for your models. This is the simplest way to deploy your models and get started with inference. Datawizz includes a free tier for serverless deployments and pay as you go pricing. 
+
+To deploy your model to Datawizz serverless, go to any trained model, click "Deploy Model" and select "Datawizz Serverless". Your model will now be available for inference in the Datawizz serverless environment. You can use it in evaluations or connect it to endpoints.
+
+![Deploy to Datawizz Serverless](/images/model-deployment/model-deployment-dw-serverless-1.gif)
+
+<Note>
+Datawizz serverless has a longer first cold-start time, so your first request to the model may take longer. This delay should not repeat as long as your model is in use at least once every 24 hours.
+</Note>
+
+## Fireworks AI
+Datawizz supports one-click deployment to the Fireworks AI platform. Fireworks deployments provide dedicated inference instances for your models, with powerful GPU support and automated scaling. Fireworks also provides convinient scale to zero for less active models, so you only pay for what you use.
+
+Learn more about Fireworks AI Inference [here](https://docs.fireworks.ai/guides/ondemand-deployments).
+
+To deploy your models to Fireworks:
+
+1. Add a Fireworks AI type providers in the providers section of the Datawizz platform. You will need to provide your Fireworks API key and account ID (your account ID will be at the dropdown on the top right corner of the Fireworks dashboard).
+2. One the account is configured, go to any trained model, click "Deploy Model" and select the Fireworks AI provider you configured (you can connect to multiple Fireworks accounts and select one to deploy to).
+3. You will be prompted to select an accelerator type (GPU) and scaling parameters. Consult the [fireworks docs](https://docs.fireworks.ai/guides/ondemand-deployments#deployment-options) for more details on these options.
+4. Deployment may take a few minutes - you'll see the deployment status in the model details page. Once the deployment is complete, the status will be "READY" and you can start using the model for inference.
+5. You can also use the Fireworks AI dashboard to manage your deployments, including scaling and stopping them.
+
+![Fireworks AI Deployment Options](/images/model-deployment/model-deployment-fireworks-ai.png)
+
+## Together AI
+Datawizz supports one-click deployment to the Together AI platform. Together AI supports both serverless and dedicated inference instances for your models, with powerful GPU support and automated scaling. Datawizz currently supports serverless deployments to Together AI, with imminent plans to support dedicated deployments as well.
+
+Learn more about Together AI Inference [here](https://docs.together.ai/docs/deployment-options).
+
+To deploy your models to Together AI:
+1. Add a Together AI type providers in the providers section of the Datawizz platform. You will need to provide your Together API key.
+2. One the account is configured, go to any trained model, click "Deploy Model" and select the Together AI provider you configured (you can connect to multiple Together accounts and select one to deploy to), and click "Deploy".
+3. Deployment may take a few minutes - you'll see the deployment status in the model details page. Once the deployment is complete, the status will be "READY" and you can start using the model for inference.
+4. You can also use the Together AI dashboard to manage your deployments, including scaling and stopping them.
+
+![Together AI Deployment Options](/images/model-deployment/model-deployment-together-ai.png)
+
+<Warning>
+Togetrher AI Serverless deployments don't support all model architectures trainable on Datawizz. Please consult their documentation for a [list of supported architectures](https://docs.together.ai/docs/lora-inference).
+</Warning>
