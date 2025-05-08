@@ -114,6 +114,17 @@
       "x": "https://x.com/datawizzai",
       "github": "https://github.com/DatawizzAI",
       "linkedin": "https://www.linkedin.com/company/datawizzai/"
-    }
+    },
+    "links": [
+      { 
+        "header": "Miscellaneous",
+        "items": [
+          {
+            "label": "Privacy Policy",
+            "href": "https://docs.datawizz.ai/privacy-policy"
+          }
+        ]
+      }
+    ]
   }
 }
