@@ -1,4 +1,99 @@
 ---
 title: 'Supported LLMs'
-description: 'To-do add a better description'
+description: 'Comprehensive list of LLM providers and models supported by Datawizz'
 ---
+
+# Supported LLM Providers
+
+Datawizz supports integration with several leading LLM providers, allowing you to route requests to multiple models, record these requests, and use the recorded logs to train smaller and more efficient models. Below is a comprehensive list of all supported providers and their available models.
+
+## OpenAI
+
+Datawizz supports the full range of OpenAI models, including GPT-4, GPT-3.5, and other specialized models.
+
+**Key Features:**
+- Full API compatibility with OpenAI's platform
+- Access to all text completion and chat completion models
+- Support for embeddings and other OpenAI capabilities
+
+[Learn more about OpenAI models](https://platform.openai.com/docs/models)
+
+## Anthropic
+
+Anthropic's Claude models are known for their conversational capabilities and safety features.
+
+**Key Features:**
+- Access to all Claude model variants
+- Support for Claude's context window capabilities
+- Integration with Anthropic's API features
+
+[Learn more about Anthropic Claude models](https://docs.anthropic.com/en/docs/about-claude/models/all-models)
+
+## Google
+
+Datawizz supports Google's Gemini models, offering high-performance AI capabilities.
+
+**Key Features:**
+- Access to all Gemini model variants
+- Support for Google's AI model capabilities
+- OpenAI-compatible interface
+
+[Learn more about Google Gemini models](https://ai.google.dev/gemini-api/docs/models)
+
+## Cerebras
+
+Integration with Cerebras inference API gives you access to their specialized AI models.
+
+**Key Features:**
+- Access to Cerebras' high-performance models
+- Support for Cerebras' specific capabilities and optimizations
+- Specialized AI inference
+
+[Learn more about Cerebras models](https://inference-docs.cerebras.ai/introduction)
+
+## Datawizz Serverless
+
+Datawizz Serverless is our native model deployment platform that supports all models fine-tuned through the Datawizz platform.
+
+**Key Features:**
+- No external API key required (built into the platform)
+- Seamless deployment of fine-tuned models
+- Support for all models trained on the Datawizz platform
+- Cost-effective serverless infrastructure
+
+## Fireworks AI
+
+Datawizz integrates with Fireworks AI's model serving platform, known for high-throughput inference.
+
+**Key Features:**
+- Access to a wide range of open and proprietary models
+- High-performance inference capabilities
+- Support for Fireworks AI's specialized optimizations
+
+[Learn more about Fireworks AI models](https://fireworks.ai/models)
+
+## Together AI
+
+Together AI offers a variety of open-source and proprietary models through their inference platform.
+
+**Key Features:**
+- Access to a wide catalog of AI models
+- Support for high-performance AI inference
+- Integration with Together AI's specialized features
+
+[Learn more about Together AI models](https://www.together.ai/models)
+
+## Adding Custom Providers
+
+If you need to integrate with a provider not listed above, please contact our support team for guidance on custom integrations.
+
+---
+
+By supporting multiple LLM providers, Datawizz enables you to:
+
+1. **Compare performance** across different models and providers
+2. **Optimize costs** by routing to the most cost-effective model for each use case
+3. **Enhance reliability** through fallback mechanisms
+4. **Leverage strengths** of different models for specific tasks
+
+For more information on configuring providers and routing strategies, see our [Routing documentation](/endpoints/routing).

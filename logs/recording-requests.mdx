@@ -1,4 +1,187 @@
 ---
 title: 'Recording Requests'
-description: 'To-do add a better description'
+description: 'Learn how to record and manage your LLM requests with the Datawizz platform'
 ---
+
+# Recording Requests with Datawizz
+
+Recording your LLM requests is the foundation for optimizing your AI usage. Datawizz automatically logs all requests routed through the platform, allowing you to analyze usage patterns, collect data for model training, and improve your AI applications over time.
+
+## Getting Started with Request Logging
+
+To start recording your LLM requests, you need to set up three components:
+
+1. **Connect your LLM provider** - Link your existing provider accounts like OpenAI or Anthropic
+2. **Create an endpoint** - Set up a routing mechanism for your requests
+3. **Update your application code** - Direct your requests through Datawizz
+
+### 1. Connect Your Provider
+
+First, connect your existing LLM provider in your Datawizz project:
+
+1. Navigate to the Providers section in your project dashboard
+2. Click "+ Add Provider" and select your provider (e.g., OpenAI)
+3. Enter your provider API key and other required credentials
+4. Add the specific models you want to use (e.g., GPT-4o, Claude 3)
+
+### 2. Create an Endpoint
+
+Next, create an endpoint to route your requests:
+
+1. Go to the Endpoints section and click "Create Endpoint"
+2. Give your endpoint a descriptive name
+3. Add at least one upstream by clicking "Add Upstream"
+4. Select the provider and model to route to
+5. Configure weights and routing conditions if using multiple models
+
+### 3. Connect from Your Application
+
+Finally, update your application code to route requests through Datawizz:
+
+<CodeGroup>
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="sk-your_datawizz_api_key", 
+    base_url="https://gw.datawizz.app/your_project_id/openai/v1",
+)
+
+response = client.chat.completions.create(
+    model="your_endpoint_id",  # Use your Datawizz endpoint ID here
+    messages=[
+        {"role": "user", "content": "Your prompt here"}
+    ]
+)
+```
+
+```javascript
+import OpenAI from "openai";
+
+const openai = new OpenAI({
+    apiKey: "sk-your_datawizz_api_key",
+    baseUrl: "https://gw.datawizz.app/your_project_id/openai/v1"
+});
+
+const completion = await openai.chat.completions.create({
+    model: "your_endpoint_id", // Use your Datawizz endpoint ID here
+    messages: [
+        { role: "user", content: "Your prompt here" }
+    ]
+});
+```
+</CodeGroup>
+
+Once configured, all requests will automatically be logged in your Datawizz dashboard, capturing both the input prompts and model responses.
+
+## Enriching Your Logs with Metadata
+
+Adding metadata to your requests provides crucial context that can help with filtering, analysis, and training specialized models later on. Metadata tags make it easy to organize and segment your data.
+
+<Card title="Metadata and Tagging" icon="tag" href="/logs/metadata-and-tagging">
+  Learn more about adding and managing metadata for your logs
+</Card>
+
+To add metadata to your requests:
+
+```javascript
+const completion = await openai.chat.completions.create({
+    model: "your_endpoint_id",
+    messages: [
+        { role: "user", content: "Your prompt here" }
+    ],
+    metadata: {
+        "user_id": "user_123",
+        "language": "en",
+        "task": "content_generation",
+        "domain": "marketing"
+    }
+});
+```
+
+## Collecting User Feedback
+
+User feedback is invaluable for improving your AI models. With Datawizz, you can collect explicit or implicit feedback on AI responses to use for model evaluation and training.
+
+<Card title="Feedback Collection" icon="comments" href="/logs/feedback">
+  Learn more about collecting and using feedback for your AI responses
+</Card>
+
+You can collect feedback programmatically using the Datawizz API:
+
+```javascript
+// After receiving a response and collecting user feedback
+await fetch(`https://api.datawizz.app/log/${logId}`, {
+    method: 'PATCH',
+    headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+        quality_rating: '👍' // or '👎' for negative feedback
+    })
+});
+```
+
+## Best Practices for Logging LLM Requests
+
+### Organize with Multiple Endpoints or Projects
+
+Create separate endpoints or projects for:
+- Different applications or use cases
+- Development, staging, and production environments
+- Different teams or departments
+
+This separation makes analysis more meaningful and enables targeted optimizations for each use case.
+
+### Enrich Your Data with Metadata
+
+Include as much contextual metadata as possible with each request:
+- User identifiers (anonymized if needed)
+- Task categories (summarization, translation, etc.)
+- Content domains (legal, medical, etc.)
+- Session or conversation IDs
+- Application-specific context
+
+The richer your metadata, the more insights you can derive and the better your specialized models will be.
+
+### Start Recording Early
+
+Begin logging your LLM requests as early as possible in your development cycle:
+- Collect diverse prompts and use cases
+- Establish baselines for performance and cost
+- Accumulate enough data for future model training
+- Identify patterns in usage that can inform your strategy
+
+Early data collection provides a foundation for continuous improvement.
+
+### Implement Structured Prompts
+
+Design your prompts with a consistent structure to make analysis easier:
+- Use standard templates for similar tasks
+- Include clear instructions in a consistent format
+- Separate different parts of the prompt (context, question, examples)
+
+Structured prompts make it easier to analyze performance patterns across similar requests.
+
+### Monitor Regularly
+
+Set up a regular review cadence to:
+- Analyze usage patterns and costs
+- Identify underperforming or overused models
+- Spot opportunities for prompt optimization
+- Flag potential issues with model responses
+
+Regular monitoring helps you stay on top of your AI usage and make timely adjustments.
+
+### Implement Cost Controls
+
+Use Datawizz's logging capabilities to:
+- Track token usage across different endpoints
+- Identify expensive or inefficient prompts
+- Set alerts for unusual usage patterns
+- Implement rate limits for high-volume endpoints
+
+Proactive monitoring can prevent unexpected cost overruns.
+
+By following these best practices, you'll build a valuable dataset that not only provides insights into your current AI usage but also enables future optimizations and the potential to train specialized models tailored to your specific needs.
