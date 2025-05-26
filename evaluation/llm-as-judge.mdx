@@ -1,0 +1,168 @@
+---
+title: 'LLM as Judge'
+description: 'Use language models to evaluate AI model outputs in Datawizz'
+---
+
+The **LLM as Judge** evaluation method uses a language model to compare the outputs of your models against the original log output. This is particularly useful for tasks like conversation, creative writing, or other scenarios where traditional metrics like exact string matching or ROUGE scores may not capture the nuanced quality of the output.
+
+## How LLM as Judge Works
+
+LLM as Judge treats the original logs output as the baseline and compares the outputs of the models against this baseline using a language model's understanding of quality, relevance, and correctness. **All scores range from 0 to 1, where 1 indicates high similarity or accuracy, and 0 indicates poor performance.**
+
+## Task-Specific Prompt Templates
+
+When configuring LLM as Judge, you can select a task to get task-relevant prompt templates for evaluation. You can further refine the prompt by providing examples, specifying category names, or adding other specifications. The provided prompt templates are:
+
+### Question Answering
+```
+Evaluate how well the candidate answered the input question/instruction given the baseline answer.
+
+Input: {{input}}
+Candidate: {{output}}
+Baseline: {{baseline_output}}
+```
+
+### Classification
+```
+Given the user input below, evaluate if the candidate output is a correct classification according to the baseline output classification.
+
+Input: {{input}}
+Candidate: {{output}}
+Baseline: {{baseline_output}}
+```
+
+### Summarization
+```
+Evaluate how well the candidate summarized the input given the baseline summary.
+
+Input: {{input}}
+Candidate: {{output}}
+Baseline: {{baseline_output}}
+```
+
+### Entity Extraction
+```
+Evaluate how well the candidate extracted the requested elements (as requested in the input) given the baseline extracted entities.
+
+Input: {{input}}
+Candidate: {{output}}
+Baseline: {{baseline_output}}
+```
+
+### Code Generation
+```
+Evaluate how well the candidate generated the requested code (as requested in the input) given the baseline code.
+
+Input: {{input}}
+Candidate: {{output}}
+Baseline: {{baseline_output}}
+```
+
+### Generic
+```
+Evaluate how similar the candidate output is to the baseline output.
+
+Input: {{input}}
+Candidate: {{output}}
+Baseline: {{baseline_output}}
+```
+
+## Custom Metrics
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/45Qi5yvyop8?si=07wJ6rTcmyXLaijz" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+For more advanced evaluation scenarios, Datawizz offers **Custom Metrics** functionality that allows you to define multiple evaluation criteria for a single LLM as Judge evaluation. Instead of using a single prompt template, you can create multiple custom metrics, each with its own specific evaluation prompt.
+
+### How Custom Metrics Work
+
+With Custom Metrics, you can:
+
+- **Define multiple evaluation dimensions**: Create separate metrics for different aspects of model performance (e.g., tone, truthfulness, brevity, comprehensiveness)
+- **Get granular insights**: Understand how models perform across various criteria rather than just an overall score
+- **Visualize trade-offs**: Use radar charts to compare model performance across all defined metrics
+
+### Example Use Case: Conversation Summary Evaluation
+
+Consider evaluating conversation summarization models across multiple dimensions:
+
+- **Comprehensiveness**: Does the summary contain all key facts from the conversation?
+- **Truthfulness**: Is the summary factually accurate?
+- **Brevity**: Is the summary concise and to the point?
+- **Tone**: Does the summary maintain an appropriate tone?
+- **Clarity**: Is the summary easy to understand?
+
+### Setting Up Custom Metrics
+
+1. **Select LLM as Judge** as your evaluation function
+2. **Choose a judge model** (recommended to use a different model than those being evaluated)
+3. **Enable Custom Metrics** in the advanced options
+4. **Add metrics** by defining:
+   - **Metric Name**: A descriptive name for the evaluation dimension
+   - **Evaluation Prompt**: Specific instructions for the judge model on how to evaluate this metric
+
+### Example Custom Metric Prompts
+
+**Comprehensiveness:**
+```
+Evaluate the provided summary and rank how comprehensive it is. Does it contain all the key facts pertaining to the conversation?
+
+Conversation: {{input}}
+Summary: {{output}}
+```
+
+**Brevity:**
+```
+Evaluate whether the summary is concise and avoids unnecessary details while maintaining clarity.
+
+Original Conversation: {{input}}
+Summary: {{output}}
+```
+
+**Truthfulness:**
+```
+Assess the factual accuracy of the summary. Are all statements in the summary supported by the original conversation?
+
+Conversation: {{input}}
+Summary: {{output}}
+```
+
+### Cost Considerations
+
+Custom Metrics multiply the number of judge model calls:
+- **Formula**: `Number of Metrics × Number of Models × Number of Evaluation Samples`
+- **Example**: 5 metrics × 3 models × 20 samples = 300 judge model API calls
+
+Plan accordingly for API costs and rate limits when using multiple custom metrics.
+
+### Visualization and Analysis
+
+Custom Metrics results are displayed as:
+- **Individual metric scores** for each model
+- **Radar charts** showing performance across all metrics
+- **Comparative analysis** highlighting model strengths and weaknesses
+
+This visualization helps identify which models excel in specific areas and understand trade-offs between different performance dimensions.
+
+## Best Practices
+
+- **Choose the right task template**: Select the prompt template that best matches your use case for more accurate evaluations
+- **Provide examples**: When possible, include examples in your custom prompts to guide the judge model
+- **Be specific**: Add detailed specifications about what constitutes good performance for your particular task
+- **Consider the judge model**: The quality of evaluation depends on the capabilities of the language model used as the judge
+
+## When to Use LLM as Judge
+
+LLM as Judge is particularly effective for:
+
+- **Conversational AI**: Evaluating chatbot responses for helpfulness, relevance, and appropriateness
+- **Creative tasks**: Assessing creative writing, storytelling, or content generation
+- **Complex reasoning**: Evaluating multi-step reasoning or explanation quality
+- **Subjective quality**: When traditional metrics can't capture the nuanced aspects of good output
+- **Open-ended tasks**: Where there may be multiple correct answers or approaches
+
+## Limitations
+
+- **Cost**: LLM as Judge requires additional API calls to the judge model, which can increase evaluation costs
+- **Consistency**: Results may vary between different judge models or even between runs with the same model
+- **Bias**: The judge model may have inherent biases that affect evaluation scores
+- **Speed**: Evaluation takes longer compared to traditional metrics due to the need for model inference

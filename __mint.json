@@ -79,7 +79,8 @@
                     "group": "Evaluation",
                     "pages": [
                         "evaluation/manual",
-                        "evaluation/automated-evaluations"
+                        "evaluation/automated-evaluations",
+                        "evaluation/llm-as-judge"
                     ]
                 }
             ]

@@ -30,7 +30,11 @@
         "groups": [
           {
             "group": "Get Started",
-            "pages": ["introduction", "platform-overview", "quickstart"]
+            "pages": [
+              "introduction",
+              "platform-overview",
+              "quickstart"
+            ]
           },
           {
             "group": "Product",
@@ -45,7 +49,9 @@
                   "logs/anonymizing-logs",
                   {
                     "group": "Working with Libraries",
-                    "pages": ["logs/libraries/vercel-ai-sdk"]
+                    "pages": [
+                      "logs/libraries/vercel-ai-sdk"
+                    ]
                   }
                 ]
               },
@@ -69,7 +75,8 @@
                 "group": "Evaluation",
                 "pages": [
                   "evaluation/manual",
-                  "evaluation/automated-evaluations"
+                  "evaluation/automated-evaluations",
+                  "evaluation/llm-as-judge"
                 ]
               }
             ]
@@ -81,11 +88,15 @@
         "groups": [
           {
             "group": "API Documentation",
-            "pages": ["api-reference/introduction"]
+            "pages": [
+              "api-reference/introduction"
+            ]
           },
           {
             "group": "Endpoints",
-            "pages": ["api-reference/endpoint/patch_log"]
+            "pages": [
+              "api-reference/endpoint/patch_log"
+            ]
           }
         ]
       }
@@ -115,7 +126,7 @@
       "linkedin": "https://www.linkedin.com/company/datawizzai/"
     },
     "links": [
-      { 
+      {
         "header": "Miscellaneous",
         "items": [
           {
