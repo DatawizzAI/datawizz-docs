@@ -78,6 +78,12 @@
                   "evaluation/automated-evaluations",
                   "evaluation/llm-as-judge"
                 ]
+              },
+              {
+                "group": "Apple Foundation Model",
+                "pages": [
+                  "afm/apple-foundation-model-adapters"
+                ]
               }
             ]
           }

@@ -1,0 +1,258 @@
+---
+title: 'Training Apple Foundation Model Adapters'
+description: 'Train, evaluate and deploy custom adapter for the Apple Foundation Model for on-device inference.'
+---
+
+<iframe src="https://www.youtube.com/embed/iWB3ZZxtGyY" width="672" height="380" title="Training & Benchmarking Adapters for the Apple Foundation Model Framework with Datawizz" frameborder="0" allowfullscreen></iframe>
+
+In WWDC 2025, Apple introduced the [Foundation Models Framework](https://developer.apple.com/documentation/foundationmodels) which allows developers to use the built-in LLM in iOS 26, iPadOS 26 and macOS 26 for fast, private and efficient on-device inference.
+
+The framework supports using custom adapters to adapt the built-in model to specific tasks. This can make the model more useful at a wider variety of tasks which it may not support well out of the box given its limited size.
+
+Datawizz makes it easy to train, evaluate and deploy custom adapters for the Apple Foundation Model. This guide will walk you through the process of training and evaluating a custom adapter using Datawizz, and then using it in your Swift application.
+
+### Why Use Apple Foundation Models?
+
+Apple's on-device models offer several key advantages:
+
+- **Privacy**: All inference happens locally on the device, keeping user data private
+- **Cost Efficiency**: No cloud API costs for AI inference
+- **Offline Capability**: Works without internet connection
+- **Speed**: Optimized for on-device performance with minimal battery drain
+
+However, these models are optimized for efficiency over raw performance. Out of the box, they're not as capable as larger cloud models like GPT-4o or Claude. This is where custom adapters become crucial.
+
+### Performance Comparison
+
+To put Apple's Foundation Model performance in perspective, here are benchmark results from MMLU (Massive Multitask Language Understanding) - a set of 15,000 multiple-choice questions across various subjects:
+
+- **GPT-4o**: 83.88% accuracy (but too large for on-device inference)
+- **Meta Llama 3.2 (3B params)**: 50.7% accuracy
+- **Microsoft Phi 3 Mini (4B params)**: 59.49% accuracy  
+- **Google Gemma 2 (2B params)**: 55.99% accuracy
+- **Apple Foundation Model**: 44.31% accuracy
+
+While the Apple model performs below other small models initially, custom adapters can dramatically improve its performance for specific tasks - often matching or exceeding much larger models.
+
+# Understanding Adapters
+
+### What Are Adapters?
+
+One common solution for specialized tasks with smaller models is to fine-tune them entirely. However, loading a custom model for each app isn't feasible - even smaller models can take up multiple gigabytes of space.
+
+Adapters offer a lightweight alternative. Instead of training an entire model, you train just a few additional layers (an "adapter") that loads on top of the base model. This provides a "best of both worlds" solution:
+
+- **Quality**: Adapters can improve performance enough to match much larger models for specific tasks
+- **Efficiency**: Adapters are only about 160MB in size, making them practical to bundle with apps
+- **Flexibility**: Complex apps can even load multiple adapters for different tasks
+
+# Data Collection
+
+To train a custom adapter, you need to collect examples to train it with. We've found that if you are already using an LLM today and looking to replace it with on-device inference, a good starting point is using the prompts and responses you already send and receive from that LLM as a starting point. If you are using platforms like Humanloop, Langfuse or Langsmith, you can easily export the LLM logs from these platforms and import them into Datawizz. [Learn more about importing logs into Datawizz in our documentation on datasets](/models/datasets).
+
+<video src="/images/apple-foundation-models/import-from-langfuse.mp4" width="100%" autoPlay controls></video>
+
+Alternatively, if you are calling LLMs like OpenAI or Anthropic directly, you can use Datawizz to record the requests and responses you send and receive from these LLMs. [Learn more about collecting LLM logs with Datawizz](/logs/recording-requests).
+
+### Amount of Samples Required
+
+Apple's guidelines suggest using at least 100-1,000 samples for basic tasks, and at least 5,000 for more complex tasks. The actual amount of data will depend greatly on the specific task you are trying to adapt the model for.
+
+Generally, the more data you have the better your adapters will perform. However, there are a couple of things to keep in mind:
+- **Quality over Quantity**: It's better to have a smaller set of high-quality examples than a large set of low-quality examples. Make sure your examples are representative of the task you are trying to adapt the model for.
+- **Diversity**: Make sure your examples cover a wide range of scenarios and edge cases. This will help the model generalize better to new inputs.
+- **Relevance**: Make sure your examples are relevant to the task you are trying to adapt the model for. If you are adapting the model for a specific domain, make sure your examples are from that domain.
+
+For extremely complex or diverse use cases, it may make sense to train multiple adapters for different sub-tasks or domains. This can help the model perform better on each specific task, but will require more data and effort to maintain.
+
+# Evaluating the Vanilla Model
+
+Before training an adapter, it's important to establish a baseline by testing the Apple Foundation Model on your specific task. This helps you understand:
+- Whether the base model is already sufficient for your needs
+- How much improvement an adapter might provide
+- What specific areas need the most improvement
+
+<video src="/images/apple-foundation-models/manual-compare.mp4" width="100%" autoPlay controls></video>
+
+1. **Deploy the Apple Foundation Model** to the Datawizz Serverless provider in the providers screen
+2. **Open it for manual comparison** - you can test it alongside other models for side-by-side evaluation
+3. **Try various prompts** representative of your use case to get a feel for the baseline performance
+
+### Running Automated Evaluations
+
+For more comprehensive testing, you should run automated evaluations:
+
+### Prepare Your Data
+1. Go to the **Dataset tab** in Datawizz
+2. If you imported logs from another system, they'll already appear as a dataset
+3. If you used Datawizz to record logs, create a dataset and import your logs
+4. **Create an evaluation split** by clicking "create split" - 20% is usually sufficient for evaluation
+
+<video src="/images/apple-foundation-models/split-dataset.mp4" width="100%" autoPlay controls></video>
+
+### Configure the Evaluation
+1. Navigate to the **Evaluation tab** and click "New Evaluation"
+2. Select the **Apple Foundation Model** as the model to evaluate
+3. Choose your **evaluation dataset**
+4. Select appropriate **evaluation functions**:
+   - String equality for exact matches
+   - LLM-as-judge for more nuanced evaluation
+   - Custom metrics specific to your use case
+
+<video src="/images/apple-foundation-models/evaluating-the-model.mp4" width="100%" autoPlay controls></video>
+
+# Training an Adapter
+
+Once you've established your baseline performance, you can begin training a custom adapter to improve the model's performance on your specific task.
+
+<video src="/images/apple-foundation-models/training-the-model.mp4" width="100%" autoPlay controls></video>
+
+### Creating Training and Evaluation Datasets
+
+Before training, ensure you have properly separated your data:
+
+1. **Training Dataset**: Used to train the adapter (typically 80% of your data)
+2. **Evaluation Dataset**: Used to test the adapter's performance (typically 20% of your data)
+
+This separation ensures you're testing the adapter on data it hasn't seen during training, giving you an accurate measure of its real-world performance.
+
+### Configuring the Training
+
+1. Navigate to the **Models section** and click "New Model"
+2. Choose the **Apple Foundation Model** as your base model
+3. Select your **training dataset**
+4. Configure training parameters:
+
+### Key Training Parameters
+
+**Epochs**: Controls how many times the trainer runs over your dataset
+- More epochs = more training, but risk of overfitting
+- Apple models typically perform best with 3-5 epochs
+- Start with 3 epochs and adjust based on results
+
+**Learning Rate**: Controls how fast the model learns
+- Higher learning rate = faster learning but potentially less stable
+- Lower learning rate = more stable but slower convergence
+- Use default settings initially, then experiment
+
+### Best Practices
+
+- **Run multiple training sessions** with different parameters to find optimal settings
+- **Monitor training logs** to watch for signs of overfitting or undertraining
+- **Start with defaults** and iterate based on evaluation results
+
+# Evaluating the Adapter
+
+After training your adapter, it's crucial to evaluate its performance to ensure it's actually improving over the base model. To ready the adapter for evaluation, in the model page once it has finished training click "Deploy Model" and select "Datawizz Serverless" as the provider. This will deploy your adapter to the Datawizz Serverless provider, making it available for evaluation.
+
+<video src="/images/apple-foundation-models/evaluating-the-adapter.mp4" width="100%" autoPlay controls></video>
+
+### Running Comparative Evaluations
+
+1. Return to the **Evaluations tab**
+2. Select your previous evaluation of the base model
+3. Click **"Re-run"** and add your newly trained adapter to the benchmark
+4. This will run the same evaluation on both models, allowing direct comparison
+
+### Analyzing Results
+
+As results stream in, you should see:
+- **Improved accuracy** on your specific task
+- **Better consistency** in responses
+- **Enhanced performance** on edge cases from your domain
+
+### Iterating on Training
+
+If results aren't satisfactory:
+1. **Adjust training parameters** (epochs, learning rate)
+2. **Improve training data quality** or add more examples
+3. **Refine evaluation metrics** to better capture your needs
+4. **Consider training multiple specialized adapters** for different aspects of your task
+
+# Using the Adapter
+
+Once you have a well-performing adapter, the final step is integrating it into your iOS application. 
+
+We'll start with a simple example view using a model to generate content:
+
+```swift
+import SwiftUI
+import FoundationModels
+
+struct ChatView: View {
+    @State private var input: String = ""
+    @State private var response: String?
+    
+    @State private var session = LanguageModelSession()
+    
+    func sendMessage(_ msg: String) {
+        Task {
+            do {
+                let modelResponse = try await session.respond(to: msg)
+                DispatchQueue.main.async {
+                  self.response = modelResponse.content
+                }
+            } catch {
+                print("Error: \(error)")
+            }
+        }
+    }
+    
+    var body: some View {
+        VStack {
+            if let response = response {
+                Text(response)
+            }
+            HStack {
+                TextField("Enter your message", text: $input)
+                    .onSubmit {
+                        sendMessage(input)
+                    }
+            }
+        }
+    }
+}
+```
+This code sets up a simple chat interface where users can enter messages and receive responses from the Apple Foundation Model.
+
+### Downloading the Adapter
+
+1. Go to your trained model in Datawizz
+2. Download the `.fmadapter` file
+3. This file contains your custom adapter weights
+
+### Integration in Swift
+
+### For Testing (Bundle with App)
+<video src="/images/apple-foundation-models/importing-model-to-xcode.mp4" width="100%" autoPlay controls></video>
+
+To use the adapter in your Swift application, you can bundle the `.fmadapter` file with your app. Here's how to do it:
+1. Drag the `.fmadapter` file into your Xcode project
+2. Ensure it's included in the app bundle
+3. Use the following code to load the adapter and create a new session with it:
+
+```swift
+.task {
+        do {
+            if let assetURL = Bundle.main.url(
+                              forResource: "my-adapter", 
+                              withExtension: "fmadapter") {
+            let adapter = try SystemLanguageModel.Adapter(
+                                      fileURL: assetURL)
+            let adaptedModel = SystemLanguageModel(adapter: adapter)
+            session = LanguageModelSession(model: adaptedModel)
+          } else {
+            print("Asset not found in the main bundle.")
+          }
+        } catch {
+            print("Error: \(error)")
+        }
+    }
+```
+<Note>This is not recommended for production apps, as it requires bundling the adapter with the app, which can increase the app size and make updates more complex.</Note>
+
+### For Production (Asset Packs - Recommended)
+
+For production apps, it's better to use Asset Packs to manage your adapters. This allows you to download the adapter at runtime, keeping your app size smaller and allowing for easier updates.
+
+See the [Apple documentation on Asset Packs](https://developer.apple.com/apple-intelligence/foundation-models-adapter/#bundle-adapter-asset-packs) for more details on how to implement this.
