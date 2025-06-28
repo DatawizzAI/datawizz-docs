@@ -1,0 +1,596 @@
+---
+title: 'Custom Evaluators'
+description: 'Create and use custom evaluators in Datawizz'
+---
+
+Datawizz provides a comprehensive set of built-in evaluators for common use cases, but sometimes you need more specialized evaluation logic. Custom evaluators allow you to implement domain-specific evaluation criteria, complex scoring algorithms, or novel assessment methods tailored to your unique requirements.
+
+Custom evaluators bridge the gap between generic metrics and your specific business needs. Whether you're evaluating specialized technical content, implementing proprietary scoring methods, or assessing outputs against custom quality criteria, custom evaluators give you the flexibility to define exactly what "good" means for your use case.
+
+There are two types of custom evaluators you can create in Datawizz:
+
+1. **Code Evaluators**: Python-based evaluators that give you full programmatic control
+2. **LLM as Judge Evaluators**: Prompt-based evaluators that leverage language models for nuanced assessment
+
+# Code Evaluators
+
+Code evaluators provide the ultimate flexibility for custom evaluation logic. They run in a secure Python environment and can implement any evaluation algorithm you need, from simple rule-based checks to complex machine learning models.
+
+### Runtime Environment
+
+Your Python code runs in a sandboxed environment with the following specifications:
+
+- **Python runtime**: 3.13
+- **Execution time limit**: 5 seconds per evaluation
+- **Memory limit**: 512 MB per evaluation
+- **Pre-installed libraries**:
+  - `transformers==4.39.3` - For working with transformer models and tokenizers
+  - `datasets==3.2.0` - Dataset manipulation and loading
+  - `importlib-metadata==8.6.1` - Package metadata utilities
+  - `chevron==0.14.0` - Logic-less templating
+  - `evaluate==0.4.0` - Evaluation metrics library
+  - `rouge-score==0.1.2` - ROUGE metrics for text summarization
+  - `jiwer==3.0.5` - Word Error Rate and other speech recognition metrics
+  - `sacrebleu==2.5.1` - BLEU score for machine translation
+  - `bert_score==0.3.13` - Semantic similarity using BERT embeddings
+  - `scikit-learn==1.6.1` - Machine learning algorithms and metrics
+  - `numpy==1.26.4` - Numerical computing
+
+### Function Signature
+
+All code evaluators must implement the following function signature:
+
+```python
+def evaluator(inputs: list, outputs: dict, reference_outputs: dict):
+    # Your evaluation logic here
+    pass
+```
+
+**Parameters:**
+- `inputs`: List of input data that was sent to the model
+- `outputs`: Dictionary containing the model's response (typically includes a 'content' key)
+- `reference_outputs`: Dictionary containing the expected/reference output for comparison
+
+### Return Types
+
+Your evaluator function can return different types depending on your evaluation needs:
+
+#### Boolean Returns
+Perfect for pass/fail evaluations:
+
+```python
+def evaluator(inputs: list, outputs: dict, reference_outputs: dict):
+    # Check if output contains required keywords
+    required_keywords = ["safety", "compliance"]
+    output_text = outputs.get('content', '').lower()
+    return all(keyword in output_text for keyword in required_keywords)
+```
+
+#### Numeric Scores (0-1)
+Ideal for continuous scoring where 1 represents perfect performance:
+
+```python
+def evaluator(inputs: list, outputs: dict, reference_outputs: dict):
+    # Calculate semantic similarity using word overlap
+    output_words = set(outputs.get('content', '').lower().split())
+    reference_words = set(reference_outputs.get('content', '').lower().split())
+    
+    if not reference_words:
+        return 0.0
+    
+    intersection = len(output_words.intersection(reference_words))
+    union = len(output_words.union(reference_words))
+    
+    return intersection / union if union > 0 else 0.0
+```
+
+#### String Returns
+Useful for classification or categorical evaluation:
+
+```python
+def evaluator(inputs: list, outputs: dict, reference_outputs: dict):
+    # Classify response tone
+    content = outputs.get('content', '').lower()
+    
+    if any(word in content for word in ['excellent', 'amazing', 'fantastic']):
+        return 'positive'
+    elif any(word in content for word in ['terrible', 'awful', 'horrible']):
+        return 'negative'
+    else:
+        return 'neutral'
+```
+
+#### Dictionary Returns
+Perfect for multi-dimensional evaluation:
+
+```python
+def evaluator(inputs: list, outputs: dict, reference_outputs: dict):
+    content = outputs.get('content', '')
+    
+    # Evaluate multiple aspects
+    return {
+        'clarity': calculate_clarity_score(content),
+        'completeness': calculate_completeness_score(content, reference_outputs.get('content', '')),
+        'accuracy': calculate_factual_accuracy(content),
+        'tone': assess_tone_appropriateness(content)
+    }
+```
+
+Example -- checking single letter answers from multiple choice questions:
+
+```python
+import re
+
+def extract_answer_letter(s):
+    """
+    Extract a single letter (A-Z) answer from a noisy string.
+    Returns the uppercase letter if found, else None.
+    """
+    if not isinstance(s, str):
+        return None
+
+    match = re.match(r"""
+        [\s"'(\[]*
+        ([A-Za-z])
+        [)\]'"\.]*
+        (\s|$)
+        """, s, re.VERBOSE)
+    if match:
+        return match.group(1).upper()
+    return None
+
+def evaluator(inputs: list, outputs: dict, reference_outputs: dict):
+    return extract_answer_letter(outputs['content']) == extract_answer_letter(reference_outputs['content'])
+```
+
+This evaluator handles the common scenario where models might return verbose responses to multiple choice questions like "The answer is (B) because..." or "B) Machine Learning" and extracts just the letter for comparison.
+
+### Best Practices for Code Evaluators
+
+#### Keep Evaluators Focused and Reusable
+Design small, single-purpose evaluators that can be combined for comprehensive evaluation:
+
+```python
+# Good: Focused evaluator for length checking
+def evaluator(inputs: list, outputs: dict, reference_outputs: dict):
+    content = outputs.get('content', '')
+    min_length = 50  # characters
+    max_length = 500
+    
+    length = len(content)
+    if length < min_length:
+        return 0.0
+    elif length > max_length:
+        return max(0.0, 1.0 - (length - max_length) / max_length)
+    else:
+        return 1.0
+```
+
+#### Handle Edge Cases Gracefully
+Always account for missing data, empty responses, or unexpected formats:
+
+```python
+def evaluator(inputs: list, outputs: dict, reference_outputs: dict):
+    # Robust handling of potential issues
+    content = outputs.get('content')
+    if not content or not isinstance(content, str):
+        return 0.0
+    
+    reference_content = reference_outputs.get('content')
+    if not reference_content or not isinstance(reference_content, str):
+        return 0.0
+    
+    # Your evaluation logic here
+    return calculate_similarity(content, reference_content)
+```
+
+#### Use Multiple Evaluators for Complex Assessment
+Rather than creating one monolithic evaluator, use multiple focused evaluators:
+
+#### Performance Note
+Testing your evaluator in the Datawizz interface may be slower than production execution due to the additional overhead of the testing environment. The actual evaluation runs will be significantly faster.
+
+### Common Use Cases for Code Evaluators
+
+#### Format Validation
+Ensure outputs follow specific formatting requirements:
+
+```python
+import json
+
+def evaluator(inputs: list, outputs: dict, reference_outputs: dict):
+    content = outputs.get('content', '')
+    
+    try:
+        # Check if output is valid JSON
+        parsed = json.loads(content)
+        
+        # Check for required fields
+        required_fields = ['name', 'age', 'email']
+        has_all_fields = all(field in parsed for field in required_fields)
+        
+        return has_all_fields
+    except json.JSONDecodeError:
+        return False
+```
+
+#### Domain-Specific Validation
+Implement business logic specific to your domain:
+
+```python
+def evaluator(inputs: list, outputs: dict, reference_outputs: dict):
+    content = outputs.get('content', '').lower()
+    
+    # Medical safety check - ensure no dangerous advice
+    dangerous_phrases = [
+        'stop taking medication',
+        'ignore doctor advice',
+        'medical emergency can wait'
+    ]
+    
+    contains_dangerous_advice = any(phrase in content for phrase in dangerous_phrases)
+    
+    return not contains_dangerous_advice  # Return False if dangerous content found
+```
+
+#### Advanced Similarity Metrics
+Implement sophisticated comparison algorithms:
+
+```python
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+
+def evaluator(inputs: list, outputs: dict, reference_outputs: dict):
+    output_text = outputs.get('content', '')
+    reference_text = reference_outputs.get('content', '')
+    
+    if not output_text or not reference_text:
+        return 0.0
+    
+    # Create TF-IDF vectors
+    vectorizer = TfidfVectorizer()
+    texts = [output_text, reference_text]
+    
+    try:
+        tfidf_matrix = vectorizer.fit_transform(texts)
+        similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
+        return float(similarity)
+    except:
+        return 0.0
+```
+
+## LLM as Judge Evaluators
+
+The **LLM as Judge** evaluation method represents a paradigm shift in how we assess AI-generated content. Instead of relying solely on traditional metrics like BLEU scores or exact string matching, this approach leverages the sophisticated understanding of language models to evaluate outputs in a more nuanced, human-like manner.
+
+This method is particularly powerful for tasks where the quality of output can't be easily quantified through simple rules or mathematical formulas. Creative writing, conversational responses, complex reasoning, and subjective assessments all benefit from the contextual understanding that LLM judges provide.
+
+### How LLM as Judge Works
+
+The evaluation process follows these steps:
+
+1. **Baseline Establishment**: The original log output serves as the reference standard
+2. **Prompt Construction**: A carefully crafted prompt instructs the judge model on evaluation criteria
+3. **Contextual Assessment**: The judge model receives the input, candidate output, and baseline output
+4. **Scoring**: The judge returns a score between 0 and 1, with detailed reasoning
+5. **Aggregation**: Multiple evaluations can be combined for comprehensive assessment
+
+**Key Principles:**
+- **Scores range from 0 to 1**: 1 indicates perfect alignment with the baseline, 0 indicates poor performance
+- **Contextual Understanding**: The judge considers nuance, intent, and quality beyond surface-level matching
+- **Consistency**: While individual judgments may vary slightly, the overall evaluation trends remain stable
+- **Transparency**: Many judge models can provide reasoning for their scores
+
+### Task-Specific Prompt Templates
+
+Datawizz provides pre-configured prompt templates optimized for different types of evaluation tasks. Each template is designed to elicit the most accurate and relevant judgments from the LLM judge. You can use these templates as starting points and customize them with specific criteria, examples, or domain knowledge.
+
+#### Question Answering
+Evaluates how well the model answered a question compared to a reference answer. This template considers correctness, completeness, and relevance.
+
+```
+Evaluate how well the candidate answered the input question/instruction given the baseline answer.
+
+Input: {{input}}
+Candidate: {{output}}
+Baseline: {{baseline_output}}
+
+Please provide a score from 0 to 1 where:
+- 1.0: Perfect answer that matches or exceeds the baseline quality
+- 0.8-0.9: Very good answer with minor differences from baseline
+- 0.6-0.7: Good answer but missing some important details
+- 0.4-0.5: Partially correct but significant gaps or errors
+- 0.2-0.3: Poor answer with major issues
+- 0.0-0.1: Completely incorrect or irrelevant answer
+```
+
+#### Classification
+Assesses whether the model correctly classified the input according to the expected category or label.
+
+```
+Given the user input below, evaluate if the candidate output is a correct classification according to the baseline output classification.
+
+Input: {{input}}
+Candidate: {{output}}
+Baseline: {{baseline_output}}
+
+Score 1.0 if the classifications match exactly, 0.5 for partially correct classifications, and 0.0 for completely incorrect classifications.
+```
+
+#### Summarization
+Evaluates the quality of summaries by comparing key information retention, conciseness, and accuracy.
+
+```
+Evaluate how well the candidate summarized the input given the baseline summary.
+
+Input: {{input}}
+Candidate: {{output}}
+Baseline: {{baseline_output}}
+
+Consider the following criteria:
+- Information retention: Are key points preserved?
+- Conciseness: Is the summary appropriately brief?
+- Accuracy: Are facts correctly represented?
+- Coherence: Is the summary well-structured and readable?
+
+Provide a score from 0 to 1 reflecting overall summary quality.
+```
+
+#### Entity Extraction
+Assesses how accurately the model identified and extracted requested entities from the input.
+
+```
+Evaluate how well the candidate extracted the requested elements (as requested in the input) given the baseline extracted entities.
+
+Input: {{input}}
+Candidate: {{output}}
+Baseline: {{baseline_output}}
+
+Score based on:
+- Completeness: Were all entities found?
+- Accuracy: Are the extracted entities correct?
+- Format: Is the output properly formatted?
+```
+
+#### Code Generation
+Evaluates generated code for correctness, efficiency, and adherence to requirements.
+
+```
+Evaluate how well the candidate generated the requested code (as requested in the input) given the baseline code.
+
+Input: {{input}}
+Candidate: {{output}}
+Baseline: {{baseline_output}}
+
+Consider:
+- Functional correctness: Does the code work as intended?
+- Code quality: Is it well-structured and readable?
+- Requirement adherence: Does it meet the specified requirements?
+- Best practices: Does it follow coding conventions?
+```
+
+#### Generic
+A flexible template for general similarity assessment when specific task templates don't apply.
+
+```
+Evaluate how similar the candidate output is to the baseline output.
+
+Input: {{input}}
+Candidate: {{output}}
+Baseline: {{baseline_output}}
+
+Assess overall similarity considering meaning, structure, and quality. Provide a score from 0 to 1.
+```
+
+### Best Practices for LLM as Judge
+
+#### Choose the Right Task Template
+Selecting the appropriate template significantly impacts evaluation quality. Match your use case to the most relevant template:
+
+- **Question Answering**: For factual Q&A, reasoning tasks, or instructional responses
+- **Classification**: For categorization, sentiment analysis, or labeling tasks  
+- **Summarization**: For content condensation or key point extraction
+- **Entity Extraction**: For named entity recognition or information extraction
+- **Code Generation**: For programming tasks or technical documentation
+- **Generic**: When no specific template fits or for novel evaluation criteria
+
+#### Provide Clear Examples and Context
+Enhance your prompts with specific examples to guide the judge model:
+
+```
+Evaluate the candidate's explanation of machine learning concepts.
+
+Example of excellent explanation (score 1.0):
+"Machine learning uses algorithms to find patterns in data and make predictions..."
+
+Example of poor explanation (score 0.2): 
+"ML is when computers learn stuff from data and do things..."
+
+Input: {{input}}
+Candidate: {{output}}
+Baseline: {{baseline_output}}
+```
+
+#### Be Specific About Evaluation Criteria
+Define exactly what constitutes good performance for your domain:
+
+```
+Evaluate the customer service response quality. Consider:
+
+1. Empathy (30%): Shows understanding of customer's situation
+2. Accuracy (40%): Provides correct information and solutions  
+3. Professionalism (20%): Maintains appropriate tone and language
+4. Completeness (10%): Addresses all aspects of the customer's query
+
+Score from 0 to 1 based on these weighted criteria.
+```
+
+#### Consider the Judge Model Capabilities
+The quality of evaluation depends heavily on the judge model's capabilities:
+
+- **Use capable models**: More advanced models generally provide better judgments
+- **Match model to task**: Some models excel at specific types of evaluation
+- **Test your prompts**: Validate that the judge model understands your criteria
+- **Monitor consistency**: Check that similar inputs receive similar scores
+
+#### Account for Subjectivity
+LLM judges may have different perspectives on subjective matters:
+
+```
+Evaluate the creativity of this story opening. Note that creativity can be subjective, 
+so focus on concrete elements:
+
+- Originality of concept or approach
+- Unexpected or innovative elements  
+- Engaging narrative voice
+- Vivid and imaginative details
+
+Provide reasoning for your score along with the numerical rating.
+```
+
+### When to Use LLM as Judge
+
+LLM as Judge evaluation shines in scenarios where traditional metrics fall short. Here are the key use cases where this approach provides the most value:
+
+#### Conversational AI and Chatbots
+Traditional metrics can't capture the nuances of natural conversation:
+
+- **Helpfulness**: Does the response actually help the user?
+- **Appropriateness**: Is the tone and content suitable for the context?
+- **Engagement**: Does the response encourage continued interaction?
+- **Empathy**: Does the bot show understanding of user emotions?
+
+*Example*: A customer asking "I'm frustrated with my order delay" needs empathetic acknowledgment, not just factual shipping information.
+
+#### Creative and Subjective Content
+When creativity and style matter more than factual accuracy:
+
+- **Creative writing**: Stories, poems, marketing copy
+- **Content generation**: Blog posts, social media content, product descriptions
+- **Artistic critique**: Evaluating creative elements in generated content
+- **Style adaptation**: Matching specific writing styles or brand voices
+
+*Example*: A marketing tagline's effectiveness depends on creativity, memorability, and brand alignment—qualities only human-like judgment can assess.
+
+#### Complex Reasoning and Explanation
+For tasks requiring multi-step thinking and clear communication:
+
+- **Educational content**: Explanations of complex concepts
+- **Problem-solving**: Step-by-step reasoning processes
+- **Technical documentation**: Clarity and completeness of instructions
+- **Analytical reports**: Quality of insights and recommendations
+
+*Example*: Explaining quantum physics requires not just accuracy but also appropriate analogies and progressive concept building.
+
+#### Open-Ended and Subjective Tasks
+When there are multiple valid approaches or subjective quality criteria:
+
+- **Advisory responses**: Personal recommendations or guidance
+- **Opinion pieces**: Balanced argumentation and perspective
+- **Design critiques**: Aesthetic and functional evaluation
+- **Strategic planning**: Quality of strategic thinking and recommendations
+
+*Example*: Career advice must be personalized, contextually appropriate, and consider multiple factors—qualities that traditional metrics can't capture.
+
+#### Quality Beyond Correctness
+When correctness alone isn't sufficient:
+
+- **Professional communication**: Email drafting, formal correspondence
+- **Customer service**: Response quality beyond just solving the problem
+- **Content moderation**: Nuanced judgment about appropriateness
+- **Translation quality**: Cultural adaptation beyond literal accuracy
+
+*Example*: A technically correct but cold customer service response may score high on accuracy but low on customer satisfaction.
+
+### Limitations and Considerations
+
+While LLM as Judge offers powerful evaluation capabilities, it's important to understand its limitations and plan accordingly:
+
+#### Cost Implications
+- **API Usage**: Each evaluation requires a call to the judge model, increasing operational costs
+- **Volume Scaling**: Large-scale evaluations can become expensive quickly
+- **Model Selection**: More capable judge models typically cost more per evaluation
+- **Mitigation**: Use LLM as Judge selectively for high-value evaluations; combine with cheaper automated metrics where appropriate
+
+#### Consistency Challenges
+- **Inter-run Variability**: The same input may receive slightly different scores across evaluations
+- **Model Dependencies**: Different judge models may have varying scoring patterns
+- **Prompt Sensitivity**: Small changes in prompts can significantly affect evaluation outcomes
+- **Mitigation**: Use multiple evaluations and statistical averaging; establish baseline consistency metrics; test prompt variations thoroughly
+
+#### Inherent Biases
+- **Training Data Bias**: Judge models reflect biases present in their training data
+- **Cultural Perspectives**: Models may favor certain cultural or linguistic patterns
+- **Domain Limitations**: Judges may perform poorly in specialized domains they weren't trained on
+- **Subjective Interpretations**: What constitutes "quality" may vary between different judge models
+- **Mitigation**: Use diverse judge models; regularly audit evaluation results for bias; incorporate human validation for critical assessments
+
+#### Performance Considerations
+- **Evaluation Speed**: LLM calls are slower than traditional metrics, affecting evaluation throughput
+- **Network Dependencies**: Requires stable internet connection and API availability
+- **Rate Limiting**: API rate limits may constrain evaluation speed
+- **Latency Variability**: Response times can vary based on model load and complexity
+- **Mitigation**: Implement async evaluation pipelines; use local models where possible; design evaluation workflows to handle latency
+
+#### Quality Dependencies
+- **Judge Model Capability**: Evaluation quality is fundamentally limited by the judge model's abilities
+- **Prompt Engineering**: Poor prompts lead to poor evaluations regardless of judge model quality
+- **Context Limitations**: Very long inputs may exceed model context windows
+- **Domain Expertise**: Judges may lack specialized knowledge for technical domains
+- **Mitigation**: Select appropriate judge models for your domain; invest in prompt engineering; break down complex evaluations into smaller components
+
+### Hybrid Evaluation Strategies
+
+For optimal results, consider combining LLM as Judge with other evaluation methods:
+
+#### Multi-Tier Evaluation
+1. **Automated Metrics**: Fast, cheap screening (BLEU, ROUGE, exact match)
+2. **LLM as Judge**: Nuanced quality assessment for promising candidates  
+3. **Human Review**: Final validation for critical decisions
+
+#### Complementary Metrics
+- Use traditional metrics for factual accuracy
+- Use LLM as Judge for style, tone, and appropriateness  
+- Use human evaluation for final quality assurance
+
+#### Adaptive Evaluation
+- Start with cheap automated metrics
+- Escalate to LLM as Judge based on automated metric thresholds
+- Reserve human evaluation for edge cases and high-stakes decisions
+
+This approach balances cost, speed, and evaluation quality while maximizing the benefits of each evaluation method.
+
+## Choosing the Right Evaluation Approach
+
+The choice between Code Evaluators and LLM as Judge depends on your specific needs, resources, and evaluation requirements:
+
+### Use Code Evaluators When:
+- **Deterministic Logic**: You need consistent, repeatable results
+- **Performance Critical**: Speed and cost efficiency are primary concerns
+- **Clear Criteria**: Success can be defined through explicit rules or calculations
+- **Domain Expertise**: You have specific knowledge that can be encoded programmatically
+- **Integration Needs**: You need to incorporate external APIs, databases, or complex algorithms
+
+### Use LLM as Judge When:
+- **Subjective Assessment**: Quality depends on nuanced human-like judgment
+- **Complex Context**: Evaluation requires understanding of implicit meaning or context
+- **Creative Content**: Assessing originality, style, or creative quality
+- **Natural Language**: Evaluating conversational or explanatory content
+- **Rapid Prototyping**: You need to quickly test evaluation concepts without coding
+
+### Hybrid Approaches:
+Many successful evaluation strategies combine both methods:
+- Use code evaluators for objective criteria (format, length, factual accuracy)
+- Use LLM as Judge for subjective quality (tone, creativity, helpfulness)
+- Implement progressive evaluation: fast automated screening followed by detailed LLM assessment
+
+## Getting Started
+
+1. **Define Your Evaluation Goals**: Clearly articulate what "good" means for your specific use case
+2. **Start Simple**: Begin with basic evaluators and iterate based on results
+3. **Test Thoroughly**: Validate your evaluators against known good and bad examples
+4. **Monitor Performance**: Track evaluation consistency and adjust as needed
+5. **Scale Thoughtfully**: Consider cost and performance implications as you scale
+
+Custom evaluators are powerful tools that let you align AI evaluation with your specific quality standards and business requirements. Whether you choose code-based logic or LLM-based judgment, the key is to match your evaluation method to your specific needs and constraints.

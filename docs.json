@@ -76,7 +76,7 @@
                 "pages": [
                   "evaluation/manual",
                   "evaluation/automated-evaluations",
-                  "evaluation/llm-as-judge"
+                  "evaluation/custom-evaluators"
                 ]
               },
               {
