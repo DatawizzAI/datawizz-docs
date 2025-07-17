@@ -59,7 +59,8 @@
                 "group": "Endpoints",
                 "pages": [
                   "endpoints/routing",
-                  "endpoints/structured-outputs"
+                  "endpoints/structured-outputs",
+                  "endpoints/attachment-processing"
                 ]
               },
               {

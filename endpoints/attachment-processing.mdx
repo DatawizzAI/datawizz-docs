@@ -1,0 +1,170 @@
+---
+title: 'Attachment Processing [Beta]'
+description: 'Send a wide variety of files to be processed by our AI models, including videos, office documents and PDFs.'
+---
+
+Many LLMs are limited to processing text, and in some cases images and audio (multi-modal models). Datawizz extends these native LLM capabilities by allowing you to send additional file types to these LLMs. Datawizz performs pre-processing to convert these files into content understandable by the LLMs.
+
+For instance, with videos - Datawizz can extract frames, audio channels and transcription to provide a rich set of data to the LLMs. Similarly, office documents and PDFs can be converted into markdown for the LLMs to process.
+
+-------
+
+# Video Inputs
+
+Datawizz makes it easy to send videos to the LLMs and have them reason about the content of the video.
+
+- **Source:** Datawizz supports downloading videos from URLs, including services like YouTube, Vimeo, TikTok and more.
+    - **Proxy:** Datawizz can also use resedential proxies automatically to download videos from these services.
+- **Processing:** Datawizz extracts frames, audio and transcriptions from the video. You can configure the number of frames to extract, the audio channels to process and the transcription settings.
+- **flexibility:** this processing is compatible with all LLMs - you can select the LLM you want to use for reasoning about the video content.
+
+![Video Processing](/images/endpoints/video-processing-log-1.png)
+_Log view of a video processing request, where you can see the frames + transcript sent to the LLM_
+
+### Sending Videos
+To send a video attachment, you can send it as a part of a message to the LLM (similar to sending images with the OpenAI API):
+
+```json
+{
+  "model": "video-testing",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "Can you describe what's in the video below? I have included some frames from the video with a timestamp burned in, as well as the transcript from the video"
+        },
+        {
+          "type": "video_url",
+          "video_url": {
+            "url": "https://www.youtube.com/watch?v=R9RRtMCdmSY",
+            "sample_fps": 1
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Configurations
+Alongside the video URL, you can specify additional configurations to control how the video is processed:
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| `url` | string | The URL of the video to process. | (required) |
+| `use_proxy` | boolean | Whether to use a residential proxy to download the video. | `false` |
+| `proxy_country` | string | The country of the proxy to use. | None (global) |
+| `detail_level` | string | The level of detail (resolution) for the frames sent to the LLM. See details below. | None (use video resolution) |
+| `sample_fps` | number | The number of frames to sample from the video per second. | 1 |
+| `sample_frames` | number | The total number of frames to sample from the video. If supplied, will be used instead of FPS, and the defined number of frames will be extracted from the video (equally spaced) | None |
+| `start_offset`| number | Process the video from a specific timestamp (in seconds) | 0 |
+| `end_offset` | number | Process the video until a specific timestamp (in seconds) | None (process until end of video) |
+| `burn_timestamps` | boolean | Whether to burn timestamps into the frames sent to the LLM. Useful reasoning about events in the video. Timestamps will have the format HH:MM:SS.ss  | `true` |
+| `timestamp_location` | string | The location of the timestamp on the frame. Can be `top-left`, `top-right`, `bottom-left`, `bottom-right`. Use this to position the timestamp where it is less likely to hide important visual information | `bottom-left` |
+| `include_audio` | boolean | If true, will send the video's audio track to the LLM (**Can only be used with LLMs that suppport audio input**) | `false` |
+| `include_transcript` | boolean | If true, will send the video's transcript to the LLM. We use OpenAI `gpt-4o-transcribe` to create the transcript | `false` |
+| `filetype` | string | The file type of the video. Can be `mp4`, `webm`, `mov`, `avi`, etc. This is used to determine how to process the video. | None (inferred from file mime type) |
+
+#### Detail Levels
+The `detail_level` parameter allows you to control the resolution of the frames sent to the LLM. The available options are:
+- `low`: 512 pixels (longest side)
+- `medium`: 768 pixels (longest side)
+- `high`: 1024 pixels (longest side)
+
+Most LLMs charge images based on their resoliution, so you can use this parameter to control the cost of processing the video. The default is `None`, which means the frames will be sent at their original resolution.
+
+### Prompting for Videos
+
+Datawizz will automatically replace the `video_url` message part with image message parts (and potentially a text part for the transcript) when sending the request to the LLM. Your prompt need to explain to the LLMs that these are frames from the video, and that the transcript is a transcription of the audio in the video.
+
+For exampple, you can use the following prompt:
+
+```json
+{
+  "role": "user",
+  "content": [
+    {
+      "type": "text",
+      "text": "Can you describe what's in the video below? I have included some frames from the video with a timestamp burned in, as well as the transcript from the video"
+    },
+    {
+      "type": "video_url",
+      "video_url": {
+        "url": "https://www.youtube.com/watch?v=R9RRtMCdmSY",
+        "sample_fps": 1
+      }
+    }
+  ]
+}
+```
+
+This will result in an LLM request that looks like this:
+```json
+{ 
+    "role": "user",
+    "content": [
+        {
+            "type": "text",
+            "text": "Can you describe what's in the video below? I have included some frames from the video with a timestamp burned in, as well as the transcript from the video"
+        },
+        {
+            "type": "image_url",
+            "image_url": {
+                "url": "https://datawizz.io/attachments/1234567890/frame_1.jpg",
+            }
+        },
+        {
+            "type": "image_url",
+            "image_url": {
+                "url": "https://datawizz.io/attachments/1234567890/frame_2.jpg",
+            }
+        },
+        ...
+        {
+            "type": "text",
+            "text": "[transcript text here]"
+        }
+}
+```
+
+<Tip>You can combine video processing with other LLM features like structured output to generate structured insights from your video. If using timestamps, you can use structured output for event identification in videos</Tip>
+
+
+# Document Inputs
+Datawizz can process a wide variety of document types, including PDFs, office documents (Word, Excel, PowerPoint) and more. These documents are converted into markdown format for the LLMs to process.
+
+Datawizz uses Microsoft's [`MarkItDown`](https://github.com/microsoft/markitdown) library to convert these documents into markdown, which is then sent to the LLMs for processing.
+
+### Sending Documents
+To send a document attachment, you can send it as a part of a message to the LLM (similar to sending images with the OpenAI API):
+```json
+{
+    "model": "document-processing",
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Can you summarize the document below?"
+                },
+                {
+                    "type": "document",
+                    "document": {
+                        "url": "https://example.com/my-document.pdf"
+                    }
+                }
+            ]
+        }
+    ]
+}
+```
+
+### Configurations
+Alongside the document URL, you can specify additional configurations to control how the document is processed:
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| `url` | string | The URL of the document to process. | (required or data) |
+| `data` | string | The base64 encoded content of the document. If provided, this will be used instead of the URL. Should be a data URI (`data:application/pdf;base64,...`) | None |
+| `use_llm_image_description` | boolean | Whether to use the LLM's image description capabilities to generate a description of the document. This is useful for documents that contain images or complex layouts. | `false` |
