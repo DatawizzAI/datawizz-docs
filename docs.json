@@ -139,6 +139,10 @@
           {
             "label": "Privacy Policy",
             "href": "https://docs.datawizz.ai/privacy-policy"
+          },
+          {
+            "label": "Terms of Service",
+            "href": "https://docs.datawizz.ai/terms-of-service"
           }
         ]
       }
