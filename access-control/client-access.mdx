@@ -1,0 +1,139 @@
+---
+title: 'Client Access'
+description: 'Enable user-level authentication and authorization with JWT tokens'
+---
+
+Client Access allows you to validate user access using JWT - creating user level keys with user level rate limits and tracking. This is useful in several scenarios:
+- **Call LLMs from the Client**: You can call LLMs directly from a web or mobile app, using the user's JWT to authenticate and authorize access.
+- **Supabase / Firebase Integration**: You can use the user's JWT from Supabase or Firebase to authenticate and authorize access to LLMs.
+- **User-Level Rate Limits**: You can define rate limits per user, allowing you to control API usage on a per-user basis.
+- **Organization LLM Access**: You can provide LLM access to users in an organization with personal, tracked & rate-limited keys.
+
+## Getting Started
+
+To enable Client Access, create a new project key (in your project settings) and enable the "Client Access" option. You will be required to provide a JWT secret - only JWTs signed with this secret will be accepted.
+
+![Configure Client Access](/images/access-control/project-key-client-access.png)
+
+Now requests to the project key must include a JWT token in the `Authorization` header. The format is `Bearer <key>:<jwt>` where `<key>` is the project key (starts with `sk-...`) and `<jwt>` is the signed JWT token.
+
+- The JWT will be validated using the configured secret.
+    - If the JWT has issued at (`iat`), not before (`nbf`) or expiration (`exp`) claims, they will be checked to ensure the token is valid.
+- The JWT must contain a user identifier in one of the following claims:
+    - `sub` (standard JWT subject claim)
+    - `user_id` (custom user ID claim)
+    - `userId` (alternative user ID claim)
+- If the JWT is valid, the user ID is extracted and used for rate limiting and tracking (this can be combined with user-level rate limits).
+- The user ID will also be added as a meta tag to the request, allowing you to track usage per user.
+
+## Adding Required Claims
+You can configure required claims for the JWT in the project key settings. This allows you to enforce specific claims that must be present in the JWT for it to be accepted (for instance, you can require a `tier` claim to control access based on user subscription level).
+![Configure Required Claims](/images/access-control/client-access-required-claims.png)
+
+## Supabase Auth Integration
+If you are using Supabase for authentication, you can easily integrate it with Datawizz client access to manager user access to LLMs.
+
+1. **Get Supabase JWT Secret / Public Key**: you'll need the JWT secret or public key from your Supabase project settings so that Datawizz can validate the JWT tokens issued by Supabase.
+    - Read more in the [Supabase documentation](https://supabase.com/docs/guides/auth/jwts#verifying-a-jwt-from-supabase).
+![Configure Supabase JWT Secret](/images/access-control/supabase-jwt-secret.png)
+2. **Enable Client Access**: Create a project key with Client Access enabled. When prompted, enter the Supabase JWT secret or public key from the previous step.
+3. **Use Supabase JWT in Requests**: When making requests to Datawizz, include the Supabase JWT in the `Authorization` header as described above. The format is `Bearer <key>:<jwt>`, where `<key>` is your Datawizz project key and `<jwt>` is the Supabase JWT token.
+
+For example, in a JavaScript application using the Supabase client library, you can get the JWT token like this:
+```javascript
+const { data: { session } } = await supabase.auth.getSession();
+const jwt = session?.access_token;
+const client = new OpenAI({
+    apiKey: `sk-<your-project-key>:${jwt}`,
+    baseURL: "https://gw.datawizz.app/**************/openai/v1"
+});
+```
+<Tip>
+**Yes, you can do this in the browser!** Datawizz client access is designed to work with client-side applications, allowing you to call LLMs directly from the browser or mobile app using the user's JWT.
+</Tip>
+
+## Supported Algorithms
+
+Thanks to the `jose` library integration, the system supports multiple JWT signing algorithms:
+
+### HMAC Algorithms (Symmetric)
+- **HS256**: HMAC with SHA-256 (recommended for simplicity)
+- **HS384**: HMAC with SHA-384
+- **HS512**: HMAC with SHA-512
+
+### RSA Algorithms (Asymmetric)
+- **RS256**: RSA with SHA-256
+- **RS384**: RSA with SHA-384  
+- **RS512**: RSA with SHA-512
+- **PS256**: RSA-PSS with SHA-256
+- **PS384**: RSA-PSS with SHA-384
+- **PS512**: RSA-PSS with SHA-512
+
+### ECDSA Algorithms (Asymmetric)
+- **ES256**: ECDSA with SHA-256
+- **ES384**: ECDSA with SHA-384
+- **ES512**: ECDSA with SHA-512
+
+
+## Error Responses
+
+### Missing JWT
+```http
+HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+
+{
+  "error": "JWT required for this key. Format: key:jwt"
+}
+```
+
+### Invalid Signature
+```http
+HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+
+{
+  "error": "signature verification failed"
+}
+```
+
+### Expired Token
+```http
+HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+
+{
+  "error": "\"exp\" claim timestamp check failed"
+}
+```
+
+### Missing Required Claim
+```http
+HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+
+{
+  "error": "Missing required claim: role"
+}
+```
+
+### Invalid Claim Value
+```http
+HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+
+{
+  "error": "Invalid value for claim role. Got: user"
+}
+```
+
+### Missing User Identifier
+```http
+HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+
+{
+  "error": "JWT must contain user identifier (sub, user_id, or userId claim)"
+}
+```
+

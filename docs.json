@@ -37,7 +37,7 @@
             ]
           },
           {
-            "group": "Product",
+            "group": "Platform",
             "pages": [
               {
                 "group": "Recording Requests",
@@ -61,6 +61,14 @@
                   "endpoints/routing",
                   "endpoints/structured-outputs",
                   "endpoints/attachment-processing"
+                ]
+              },
+              {
+                "group": "Access Control",
+                "pages": [
+                  "access-control/virtual-keys",
+                  "access-control/rate-limits",
+                  "access-control/client-access"
                 ]
               },
               {

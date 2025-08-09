@@ -1,0 +1,32 @@
+---
+title: 'Virtual Keys'
+description: 'Manage access to AI models and track usage across applications'
+---
+
+Datawizz let's you create "virtual keys" to manage access to AI models and track AI usage across different applications or environments.
+
+Datawizz Virtual Keys operate at two levels:
+- **Key Based Access**: lets you create an API key for an application or environment (`sk-<key>`).
+- **Client Key Access**: lets you define user-level access controls. The API key is combined with a signed JWT token. Lets you define per-user rate limits, and use JWT claims to control access to specific models or features.
+
+Keys are managed at the Project level, and can have global access to all endpoints in a project or fine-grained access to specific models or features.
+
+## Key Based Access
+
+Key Based Access is the simplest way to use Datawizz. You create an API key that can be used by any application or environment. This key can be used to access all models and features available to the key.
+
+To administer keys, go to the **Settings** page of your project where you will see a list of existing keys and options to create new ones.
+
+## Client Key Access
+
+Client Key Access allows you to create API keys that are combined with a signed JWT token. This enables you to define user-level access controls and rate limits. These keys are meant to be publishabled, so they don't work on their own, but only when combined with a JWT token signed with a secret key.
+
+Leard more about [Client Access](../client-access).
+
+## Limiting Endpoint Access
+
+By default, keys have access to all endpoints in a project. You can limit access to specific endpoints by configuring the key's permissions.
+
+When expanding the key details, you will see the "Allowed Endpoints" section. Here you can select which endpoints the key has access to. This allows you to create keys that are limited to specific models or features.
+
+![Configure Allowed Endpoints](/images/access-control/project-key-allowed-endpoint.png)
