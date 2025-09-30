@@ -72,6 +72,13 @@
                 ]
               },
               {
+                "group": "Plugins & Guardrails",
+                "pages": [
+                  "plugins/plugins",
+                  "plugins/build-custom-plugins"
+                ]
+              },
+              {
                 "group": "Models",
                 "pages": [
                   "models/training-models",
