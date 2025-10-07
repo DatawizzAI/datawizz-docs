@@ -101,24 +101,28 @@ const completion = await openai.chat.completions.create({
 
 ## Collecting User Feedback
 
-User feedback is invaluable for improving your AI models. With Datawizz, you can collect explicit or implicit feedback on AI responses to use for model evaluation and training.
+User feedback is invaluable for improving your AI models. With Datawizz, you can collect structured feedback signals on AI responses to use for model evaluation and training. Feedback signals support multiple sources (users and automated evaluators), weighted importance, and rich contextual information.
 
-<Card title="Feedback Collection" icon="comments" href="/logs/feedback">
-  Learn more about collecting and using feedback for your AI responses
+<Card title="Feedback Signals" icon="comments" href="/logs/feedback">
+  Learn more about collecting and using feedback signals for your AI responses
 </Card>
 
-You can collect feedback programmatically using the Datawizz API:
+You can collect feedback signals programmatically using the Datawizz API:
 
 ```javascript
 // After receiving a response and collecting user feedback
-await fetch(`https://api.datawizz.app/log/${logId}`, {
-    method: 'PATCH',
+await fetch(`https://gw.datawizz.app/${projectId}/feedback/${logId}`, {
+    method: 'POST',
     headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-        quality_rating: '👍' // or '👎' for negative feedback
+        score: 0.9,        // -1 to 1 scale
+        weight: 1.0,       // 0 to 1 importance
+        signal_source: 'user',
+        signal_type: 'explicit',
+        qualitative_feedback: 'Great response!'
     })
 });
 ```

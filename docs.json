@@ -117,6 +117,7 @@
           {
             "group": "Endpoints",
             "pages": [
+              "api-reference/endpoint/post_feedback",
               "api-reference/endpoint/patch_log"
             ]
           }

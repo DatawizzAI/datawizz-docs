@@ -10,7 +10,12 @@
     },
     "servers": [
         {
-            "url": "https://www.datawizz.app/api"
+            "url": "https://www.datawizz.app/api",
+            "description": "Datawizz Dashboard API"
+        },
+        {
+            "url": "https://gw.datawizz.app",
+            "description": "Datawizz AI Gateway"
         }
     ],
     "security": [
@@ -19,6 +24,150 @@
         }
     ],
     "paths": {
+        "/{project_uid}/feedback/{inference_log_id}": {
+            "post": {
+                "summary": "Submit feedback signal for an inference",
+                "description": "Submit a feedback signal to assess model performance for a specific inference. Feedback signals are used for reinforcement learning and model improvement.\n\n**Authentication**: Requires the same API key authentication as inference requests. For JWT-enabled keys, the user ID from the JWT will be included in the feedback metadata.",
+                "operationId": "submitFeedback",
+                "tags": ["Feedback"],
+                "servers": [
+                    {
+                        "url": "https://gw.datawizz.app"
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "project_uid",
+                        "in": "path",
+                        "required": true,
+                        "description": "The unique identifier of the project",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "inference_log_id",
+                        "in": "path",
+                        "required": true,
+                        "description": "The unique identifier of the inference log",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/FeedbackSignalRequest"
+                            },
+                            "examples": {
+                                "positive_feedback": {
+                                    "summary": "Positive feedback with high score",
+                                    "value": {
+                                        "score": 0.9,
+                                        "weight": 1.0,
+                                        "signal_source": "user",
+                                        "signal_type": "explicit",
+                                        "qualitative_feedback": "Great response, very helpful!"
+                                    }
+                                },
+                                "negative_feedback": {
+                                    "summary": "Negative feedback with improvement",
+                                    "value": {
+                                        "score": -0.5,
+                                        "weight": 0.8,
+                                        "signal_source": "user",
+                                        "signal_type": "explicit",
+                                        "qualitative_feedback": "Response was inaccurate",
+                                        "improvement": {
+                                            "role": "assistant",
+                                            "content": "Here is the corrected response..."
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Feedback signal recorded successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "description": "The unique identifier of the feedback signal"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Feedback signal recorded successfully"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid feedback data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - Invalid or missing API key",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Inference log does not belong to this project",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found - Inference log not found or expired",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/log/{id}": {
             "patch": {
             "description": "Edit an existing log in the system",
@@ -106,24 +255,78 @@
                     "output": {
                         "$ref": "#/components/schemas/Json",
                         "description": "The output data for the log"
-                    },
-                    "quality_feedback": {
-                        "type": "string",
-                        "description": "The quality feedback for the log - an improvement suggestion for the generated output"
-                    },
-                    "quality_rating": {
-                        "type": "string",
-                        "enum": [
-                            "👍",
-                            "👎"
-                        ],
-                        "description": "The quality rating for the log - a rating of the generated output - either 👍 or 👎"
                     }
                 }
             },
             "Json": {
                 "type": "object",
                 "additionalProperties": true
+            },
+            "FeedbackSignalRequest": {
+                "type": "object",
+                "required": ["score", "weight"],
+                "properties": {
+                    "score": {
+                        "type": "number",
+                        "format": "float",
+                        "minimum": -1,
+                        "maximum": 1,
+                        "description": "Quality score of the response (-1 is worst, 1 is best)",
+                        "example": 0.8
+                    },
+                    "weight": {
+                        "type": "number",
+                        "format": "float",
+                        "minimum": 0,
+                        "maximum": 1,
+                        "description": "Importance of this signal (0 is least important, 1 is most important)",
+                        "example": 1.0
+                    },
+                    "improvement": {
+                        "type": "object",
+                        "nullable": true,
+                        "description": "An improved version of the response (used for supervised fine-tuning)",
+                        "example": {
+                            "role": "assistant",
+                            "content": "Improved response text..."
+                        }
+                    },
+                    "qualitative_feedback": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Qualitative feedback about the response (used for RLHF)",
+                        "example": "The response was accurate but could be more concise"
+                    },
+                    "signal_name": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Name of the signal/sensor for observability",
+                        "example": "user_thumbs_up"
+                    },
+                    "signal_source": {
+                        "type": "string",
+                        "enum": ["system", "user"],
+                        "default": "user",
+                        "description": "Source of the feedback signal",
+                        "example": "user"
+                    },
+                    "signal_type": {
+                        "type": "string",
+                        "enum": ["explicit", "implicit"],
+                        "default": "explicit",
+                        "description": "Type of feedback signal",
+                        "example": "explicit"
+                    },
+                    "metadata": {
+                        "type": "object",
+                        "nullable": true,
+                        "description": "Additional metadata for observability",
+                        "example": {
+                            "ui_version": "1.2.3",
+                            "session_id": "abc123"
+                        }
+                    }
+                }
             },
             "Error": {
                 "required": [
