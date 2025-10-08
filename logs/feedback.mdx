@@ -74,11 +74,65 @@ Implicit feedback offers more natural user experiences and higher participation 
 
 ### Sending Feedback Signals via API
 
-To send a feedback signal via the API, use the `POST /{project_uid}/feedback/{inference_log_id}` endpoint.
+To send a feedback signal via the API, use the `POST /{project_uid}/{endpoint_uid}/feedback/{inference_log_id}` endpoint.
 
 When you generate a response through the OpenAI or Anthropic compatible API endpoints, Datawizz returns the log ID in the response. Use this log ID to submit feedback signals.
 
-Here's an example of submitting a positive feedback signal:
+#### Feedback JWT Tokens
+
+Each inference response includes an `X-Feedback-Token` header containing a signed JWT that can be used to submit feedback without requiring your API key. This is perfect for client-side feedback collection where you don't want to expose your API key.
+
+**How It Works:**
+
+1. **Token Generation**: The gateway generates a signed JWT for each inference response
+2. **Token Contents**: The JWT contains:
+   - `inference_id`: The unique identifier for the inference
+   - `user_id`: (optional) The user ID if client JWT authentication was used
+3. **Token Usage**: Use this JWT as a Bearer token to submit feedback securely from client-side code
+4. **Token Expiration**: Tokens are valid for 24 hours after generation
+5. **Authentication**: The feedback endpoint accepts either:
+   - **JWT auth**: `Authorization: Bearer <feedback-jwt>` (recommended for client-side)
+   - **API key auth**: `Authorization: Bearer <api-key>` (for server-side)
+
+**Response Headers:**
+
+Every inference response includes:
+- `X-Feedback-Url`: The URL to submit feedback (e.g., `https://gw.datawizz.app/{project}/{endpoint}/feedback/{inference_id}`)
+- `X-Feedback-Token`: The signed JWT token for feedback authentication (valid for 24 hours)
+
+**Example: Using Feedback JWT Tokens (Client-Side)**
+
+```javascript
+// 1. Make an inference request
+const response = await fetch('https://gw.datawizz.app/{project}/{endpoint}/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer your-api-key',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ messages: [...] })
+});
+
+// 2. Extract feedback headers
+const feedbackUrl = response.headers.get('X-Feedback-Url');
+const feedbackToken = response.headers.get('X-Feedback-Token');
+
+// 3. Submit feedback using the JWT token (no API key needed - safe for client-side)
+await fetch(feedbackUrl, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${feedbackToken}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    score: 0.8,
+    weight: 1.0,
+    qualitative_feedback: 'Great response!'
+  })
+});
+```
+
+**Example: Using API Key (Server-Side)**
 
 ```javascript
 // After receiving a response and collecting user feedback
