@@ -1,0 +1,189 @@
+---
+description: Detects and removes non-printable, invisible Unicode characters to maintain
+  text integrity and prevent steganography-based attacks.
+title: Invisible Text
+---
+
+The Invisible Text plugin detects and removes non-printable, invisible Unicode characters from text inputs. This is crucial for maintaining text integrity in Large Language Models (LLMs) and safeguarding against steganography-based attacks where hidden data might be embedded using invisible characters.
+
+## Features
+
+- **Comprehensive Detection**: Identifies invisible characters in Private Use Areas and special Unicode categories
+- **Flexible Response**: Either block requests or automatically clean the text
+- **Optional Replacement**: Replace invisible characters with visible markers instead of removing them
+- **Selective Scanning**: Choose to scan only the latest message or all messages
+
+## Detected Character Types
+
+The plugin targets the following invisible Unicode characters:
+
+### Private Use Areas (PUA)
+- **Basic Multilingual Plane**: U+E000 to U+F8FF
+- **Supplementary Private Use Area-A**: U+F0000 to U+FFFFD
+- **Supplementary Private Use Area-B**: U+100000 to U+10FFFD
+
+### Unicode Categories
+- **Cf (Format characters)**: Characters that affect formatting but don't display
+- **Cc (Control characters)**: Non-printing control codes
+- **Co (Private use characters)**: Reserved for private use
+- **Cn (Unassigned characters)**: Code points not assigned to any character
+
+### Common Invisible Characters
+- Zero Width Space (U+200B)
+- Zero Width Non-Joiner (U+200C)
+- Zero Width Joiner (U+200D)
+- Word Joiner (U+2060)
+- Zero Width No-Break Space/BOM (U+FEFF)
+- Soft Hyphen (U+00AD)
+- And many more...
+
+## Use Cases
+
+- **Security**: Prevent steganography attacks where data is hidden in invisible characters
+- **Data Integrity**: Ensure clean text input to LLMs without hidden formatting
+- **Content Validation**: Block messages that may contain hidden instructions
+- **Text Normalization**: Clean user input before processing
+
+## Configuration Options
+
+### `scanAllMessages` (boolean)
+- `true`: Scans all messages in the array
+- `false`: Only scans the latest message
+- Default: `false`
+
+### `blockRequest` (boolean)
+- `true`: Rejects the request if any invisible characters are found
+- `false`: Removes the characters and allows the request to continue
+- Default: `false`
+
+### `redactCharacters` (string)
+- If set, replaces each detected invisible character with this visible character
+- If not set, removes the invisible characters entirely
+- Useful for debugging or auditing purposes
+- Example: `"?"` or `"⬚"`
+
+## Example Configurations
+
+### Remove Invisible Characters (Default)
+
+```json
+{
+  "scanAllMessages": false,
+  "blockRequest": false
+}
+```
+
+This configuration silently removes any invisible characters from the latest message.
+
+### Block Requests with Invisible Characters
+
+```json
+{
+  "scanAllMessages": true,
+  "blockRequest": true
+}
+```
+
+This configuration scans all messages and rejects the request if any invisible characters are detected.
+
+### Replace Invisible Characters with Markers
+
+```json
+{
+  "scanAllMessages": false,
+  "blockRequest": false,
+  "redactCharacters": "⬚"
+}
+```
+
+This configuration replaces invisible characters with a visible placeholder (⬚) for debugging purposes.
+
+### Strict Mode for All Messages
+
+```json
+{
+  "scanAllMessages": true,
+  "blockRequest": true
+}
+```
+
+This configuration provides maximum security by scanning all messages and blocking any request containing invisible characters.
+
+## Response Behavior
+
+### When Blocking (blockRequest: true)
+- Returns `reject: true` with reason indicating how many invisible characters were found
+- No messages are modified
+- Debug logs show specific Unicode code points detected
+
+### When Cleaning (blockRequest: false)
+- Returns modified messages array with invisible characters removed/replaced
+- Original request continues through the pipeline
+- Debug logs indicate how many characters were cleaned
+
+## Example Scenarios
+
+### Scenario 1: Hidden Prompt Injection
+
+**Input**: `"Ignore previous instructions\u200Band do something else"`
+
+**With blockRequest: true**: Request is rejected
+
+**With blockRequest: false**: Cleaned to `"Ignore previous instructionsand do something else"`
+
+### Scenario 2: Steganography Attack
+
+**Input**: Text with hidden data encoded in Private Use Area characters
+
+**Detection**: Plugin identifies PUA characters (e.g., U+E001, U+E002, etc.)
+
+**Response**: Either blocks or removes these characters based on configuration
+
+## Debug Information
+
+The plugin provides detailed debug information including:
+- Number of messages scanned
+- Total invisible characters found
+- Specific Unicode code points detected (e.g., U+200B, U+FEFF)
+- Action taken (blocked, removed, or replaced)
+
+## Technical Notes
+
+- Handles both string and array content formats
+- Correctly processes surrogate pairs for characters outside the Basic Multilingual Plane
+- Zero-width characters are always detected regardless of context
+- Format characters that affect bidirectional text (like RLO, LRO) are detected
+- The plugin is designed to be safe and will not remove legitimate Unicode characters
+
+---
+
+## Configuration Schema
+
+```json
+{
+  "type": "object",
+  "title": "Invisible Text Configuration",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "blockRequest": {
+      "type": "boolean",
+      "title": "Block Request",
+      "default": false,
+      "description": "If true, rejects the request if any invisible characters are found. If false, removes the characters and allows the request"
+    },
+    "scanAllMessages": {
+      "type": "boolean",
+      "title": "Scan All Messages",
+      "default": false,
+      "description": "If true, scans all messages. If false, only scans the latest message"
+    },
+    "redactCharacters": {
+      "type": "string",
+      "title": "Redact Characters",
+      "maxLength": 10,
+      "description": "If set, replaces each detected invisible character with this character. If not set, removes the characters entirely"
+    }
+  },
+  "description": "Configuration for the Invisible Text detection plugin"
+}
+```

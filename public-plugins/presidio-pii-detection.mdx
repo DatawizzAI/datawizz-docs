@@ -1,0 +1,257 @@
+---
+description: Analyzes AI requests for personally identifiable information (PII) using
+  Microsoft Presidio and blocks requests containing sensitive data like emails, phone
+  numbers, SSNs, and credit cards.
+title: Presidio PII Detection
+---
+
+Analyzes AI requests for personally identifiable information (PII) using Microsoft Presidio and blocks requests containing sensitive data.
+
+## Overview
+
+The Detection Plugin scans incoming AI requests for PII entities and rejects requests when sensitive information is detected. It provides granular control over what types of PII to detect, confidence thresholds, and custom rejection messages.
+
+## Supported PII Types
+
+The plugin can detect 30+ entity types across multiple regions:
+
+### Personal Information
+- `PERSON` - Person names
+- `EMAIL_ADDRESS` - Email addresses
+- `PHONE_NUMBER` - Phone numbers
+- `DATE_TIME` - Dates and times
+- `LOCATION` - Geographic locations
+- `URL` - Web addresses
+- `IP_ADDRESS` - IP addresses
+
+### Financial
+- `CREDIT_CARD` - Credit card numbers
+- `CRYPTO` - Cryptocurrency wallet addresses
+- `IBAN_CODE` - International bank account numbers
+
+### United States
+- `US_SSN` - Social Security Numbers
+- `US_DRIVER_LICENSE` - Driver's license numbers
+- `US_PASSPORT` - Passport numbers
+- `US_BANK_NUMBER` - Bank account numbers
+- `US_ITIN` - Individual Taxpayer Identification Numbers
+
+### International
+- `UK_NHS` - UK National Health Service numbers
+- `SG_NRIC_FIN` - Singapore NRIC/FIN numbers
+- `AU_ABN`, `AU_ACN`, `AU_TFN`, `AU_MEDICARE` - Australian identifiers
+- `IN_PAN`, `IN_AADHAAR`, `IN_VEHICLE_REGISTRATION` - Indian identifiers
+- `ES_NIF` - Spanish tax identification
+- `IT_FISCAL_CODE`, `IT_DRIVER_LICENSE`, `IT_VAT_CODE`, `IT_PASSPORT`, `IT_IDENTITY_CARD` - Italian identifiers
+
+### Healthcare
+- `MEDICAL_LICENSE` - Medical license numbers
+- `NRP` - Medical prescriber numbers
+
+## Configuration
+
+### Basic Settings
+
+**`entities`** (optional, array of strings)
+List of PII entity types to detect. If not specified, all supported entities are detected.
+
+**`language`** (string, default: `"en"`)
+Language code for text analysis (e.g., `"en"`, `"es"`, `"de"`).
+
+**`score_threshold`** (number, default: `0.5`)
+Minimum confidence score (0-1) required to flag text as PII. Lower values (e.g., `0.4`) catch more PII but may increase false positives. Higher values (e.g., `0.7`) reduce false positives but may miss some PII.
+
+### Rejection Behavior
+
+**`reject_on_detection`** (boolean, default: `true`)
+Whether to reject requests when PII is detected. Set to `false` to allow requests but log PII detection for monitoring.
+
+**`rejection_message`** (string)
+Custom message returned when a request is rejected. Default: `"Request contains personally identifiable information and cannot be processed."`
+
+### Advanced Detection
+
+**`allow_list`** (optional, array of strings)
+Terms/patterns that should NOT be flagged as PII, even if they match detection patterns (e.g., `["example@company.com", "555-0000"]`).
+
+**`deny_list`** (optional, array of strings)
+Terms/patterns that should ALWAYS be flagged as PII, regardless of detection confidence (e.g., `["confidential", "internal-use-only"]`).
+
+**`context`** (optional, array of strings)
+Additional context words to improve detection accuracy (e.g., `["patient", "medical", "doctor"]`).
+
+**`return_decision_process`** (boolean, default: `false`)
+Include detailed analysis explanation in debug output to understand why text was flagged.
+
+## Example Configuration
+
+```json
+{
+  "entities": ["EMAIL_ADDRESS", "PHONE_NUMBER", "US_SSN", "CREDIT_CARD"],
+  "score_threshold": 0.6,
+  "reject_on_detection": true,
+  "rejection_message": "Your request contains sensitive information. Please remove PII and try again.",
+  "allow_list": ["support@example.com"],
+  "return_decision_process": true
+}
+```
+
+## Behavior
+
+- **Fail-open**: If the plugin encounters an error, requests are allowed to proceed
+- **Multi-message support**: Analyzes all messages in the request
+- **Debug output**: Returns detailed detection information when enabled in Gateway UI
+
+---
+
+## Configuration Schema
+
+```json
+{
+  "type": "object",
+  "title": "PII Detection Plugin Configuration",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "context": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "Context Words",
+      "examples": [
+        [
+          "patient",
+          "medical",
+          "doctor"
+        ]
+      ],
+      "description": "Additional context words to improve detection accuracy. These help the analyzer understand the surrounding text."
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "PERSON",
+          "EMAIL_ADDRESS",
+          "PHONE_NUMBER",
+          "CREDIT_CARD",
+          "CRYPTO",
+          "DATE_TIME",
+          "IBAN_CODE",
+          "IP_ADDRESS",
+          "LOCATION",
+          "MEDICAL_LICENSE",
+          "NRP",
+          "URL",
+          "US_BANK_NUMBER",
+          "US_DRIVER_LICENSE",
+          "US_ITIN",
+          "US_PASSPORT",
+          "US_SSN",
+          "UK_NHS",
+          "SG_NRIC_FIN",
+          "AU_ABN",
+          "AU_ACN",
+          "AU_TFN",
+          "AU_MEDICARE",
+          "IN_PAN",
+          "IN_AADHAAR",
+          "IN_VEHICLE_REGISTRATION",
+          "ES_NIF",
+          "IT_FISCAL_CODE",
+          "IT_DRIVER_LICENSE",
+          "IT_VAT_CODE",
+          "IT_PASSPORT",
+          "IT_IDENTITY_CARD"
+        ],
+        "type": "string"
+      },
+      "title": "Entity Types",
+      "examples": [
+        [
+          "EMAIL_ADDRESS",
+          "PHONE_NUMBER",
+          "CREDIT_CARD"
+        ]
+      ],
+      "description": "List of PII entity types to detect. If not specified, all supported entities will be detected."
+    },
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "default": "en",
+      "examples": [
+        "en",
+        "es",
+        "de",
+        "fr"
+      ],
+      "description": "Language code for text analysis. Supported languages depend on Presidio configuration."
+    },
+    "deny_list": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "Deny List",
+      "examples": [
+        [
+          "confidential",
+          "internal-use-only"
+        ]
+      ],
+      "description": "List of terms/patterns that should always be flagged as PII, regardless of detection confidence."
+    },
+    "allow_list": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "Allow List",
+      "examples": [
+        [
+          "example@company.com",
+          "555-0000"
+        ]
+      ],
+      "description": "List of terms/patterns that should not be flagged as PII, even if they match detection patterns."
+    },
+    "score_threshold": {
+      "type": "number",
+      "title": "Score Threshold",
+      "default": 0.5,
+      "maximum": 1,
+      "minimum": 0,
+      "description": "Minimum confidence score (0-1) required to consider an entity as PII. Higher values reduce false positives but may miss some PII."
+    },
+    "rejection_message": {
+      "type": "string",
+      "title": "Rejection Message",
+      "default": "Request contains personally identifiable information and cannot be processed.",
+      "description": "Custom message to return when request is rejected due to PII detection."
+    },
+    "reject_on_detection": {
+      "type": "boolean",
+      "title": "Reject on Detection",
+      "default": true,
+      "description": "Whether to reject requests when PII is detected. Set to false to allow requests but log PII detection."
+    },
+    "return_decision_process": {
+      "type": "boolean",
+      "title": "Return Decision Process",
+      "default": false,
+      "description": "Include detailed analysis explanation in debug output. Useful for understanding why certain text was flagged."
+    }
+  },
+  "description": "Configuration for the Presidio-based PII detection plugin that rejects requests containing personally identifiable information."
+}
+```
+
+
+---
+
+## Supported Phases
+
+- **Request Phase**: Supports processing during the REQUEST phase
+- **Response Phase**: Supports processing during the RESPONSE phase
+- **Log Phase**: Supports processing during the LOG phase

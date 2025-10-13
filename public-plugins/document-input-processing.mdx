@@ -1,0 +1,194 @@
+---
+description: Convert PDFs, Word, PowerPoint, and Excel documents into clean markdown
+  for LLM processing. Uses Microsoft's MarkItDown with optional LLM-powered image
+  descriptions.
+title: Document Input Processing
+---
+
+Process a wide variety of document types, including PDFs, office documents (Word, Excel, PowerPoint) and more, by converting them into markdown format that LLMs can understand.
+
+## Overview
+
+Many LLMs are limited to processing text, and in some cases images and audio. This plugin extends native LLM capabilities by pre-processing documents into content that LLMs can understand. The plugin automatically detects document URLs or data URIs in your messages and converts them into clean, structured markdown text.
+
+The plugin uses Microsoft's [`MarkItDown`](https://github.com/microsoft/markitdown) library to convert documents into markdown, which is then sent to the LLM for processing.
+
+## Features
+
+- **Multiple Formats**: Supports PDF, Word (DOCX, DOC), PowerPoint (PPTX, PPT), and Excel (XLSX, XLS) documents
+- **Markdown Conversion**: Converts documents into clean, structured markdown with preserved formatting
+  - Headings, lists, and tables are maintained
+  - Proper paragraph breaks and text emphasis
+  - All readable text content extracted
+- **Image Handling**: Optional LLM-powered image descriptions for documents containing images or complex layouts
+- **Flexible Input**: Download from URLs or process base64-encoded data URIs
+- **Automatic Format Detection**: Intelligent content-type and file format detection
+
+## Installation
+
+1. Add the plugin to your Datawizz endpoint configuration
+2. Set the endpoint URL to: `https://your-service-url/plugin/document`
+3. Configure the Authorization header with your secret token:
+   - Header name: `Authorization`
+   - Header value: `Bearer YOUR_SECRET_TOKEN`
+4. Optionally configure default settings (see Configuration below)
+
+## Configuration
+
+You can specify configurations to control how the document is processed:
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| `url` | string | The URL of the document to process | (required or data) |
+| `data` | string | The base64 encoded content of the document. If provided, this will be used instead of the URL. Should be a data URI (`data:application/pdf;base64,...`) | None |
+| `use_llm_image_description` | boolean | Whether to use the LLM's image description capabilities to generate descriptions for images found in documents. This is useful for documents that contain images or complex layouts. **Note:** Enabling this may increase processing time and incur additional LLM API costs | `false` |
+
+## Usage
+
+Send document attachments as part of a message to the LLM (similar to sending images):
+
+### Example 1: Document from URL
+
+**Input Message:**
+```json
+{
+  "model": "document-processing",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "Can you summarize the document below?"
+        },
+        {
+          "type": "document",
+          "document": {
+            "url": "https://example.com/my-document.pdf"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+**What happens:**
+The plugin downloads the document from the URL, converts it to markdown, and replaces the document content with the markdown text.
+
+**Output to LLM:**
+```json
+{
+  "role": "user",
+  "content": [
+    {
+      "type": "text",
+      "text": "Can you summarize the document below?"
+    },
+    {
+      "type": "text",
+      "text": "[markdown content of the document]"
+    }
+  ]
+}
+```
+
+### Example 2: Document from Data URI
+
+**Input Message:**
+```json
+{
+  "role": "user",
+  "content": [
+    {
+      "type": "document",
+      "document": {
+        "data": "data:application/pdf;base64,JVBERi0xLjQK..."
+      }
+    }
+  ]
+}
+```
+
+**What happens:**
+The data URI is decoded, processed, and replaced with markdown content.
+
+## Message Format Requirements
+
+The plugin ONLY processes structured multimodal content with explicit `document` type. Plain string URLs like `"content": "https://example.com/doc.pdf"` will NOT be processed.
+
+Documents must be in this format:
+
+```json
+{
+  "type": "document",
+  "document": {
+    "url": "https://example.com/report.pdf"
+  }
+}
+```
+
+Or with data URI:
+
+```json
+{
+  "type": "document",
+  "document": {
+    "data": "data:application/pdf;base64,..."
+  }
+}
+```
+
+## Supported Document Types
+
+- **PDF**: `.pdf`
+- **Word**: `.doc`, `.docx`
+- **PowerPoint**: `.ppt`, `.pptx`
+- **Excel**: `.xls`, `.xlsx`
+
+## Example Configuration
+
+```json
+{
+  "use_llm_image_description": true
+}
+```
+
+This configuration will use an LLM (OpenAI's GPT-4o) to generate detailed descriptions for any images found in the documents, providing richer context for the language model.
+
+## Performance Notes
+
+- Processing time varies by document size and complexity
+- Enabling `use_llm_image_description` requires an OpenAI API key configured on the server and may increase processing time and costs
+- Large documents (100+ pages) may take longer to process
+- Scanned PDFs (image-only) may not extract text without OCR capabilities
+- The plugin gracefully handles errors - if processing fails, the original message is preserved
+
+---
+
+## Configuration Schema
+
+```json
+{
+  "type": "object",
+  "title": "Document Processing Plugin Configuration",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "use_llm_image_description": {
+      "type": "boolean",
+      "title": "Use LLM Image Description",
+      "default": false,
+      "description": "Use an LLM to generate descriptions for images found in documents (may increase processing time and cost)"
+    }
+  },
+  "description": "Configuration for the document processing plugin that converts documents into markdown text",
+  "additionalProperties": false
+}
+```
+
+
+---
+
+## Supported Phases
+
+- **Request Phase**: Supports processing during the REQUEST phase

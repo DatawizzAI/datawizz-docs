@@ -122,6 +122,26 @@
             ]
           }
         ]
+      },
+      {
+        "tab": "Public Plugins",
+        "groups": [
+          {
+            "group": "Plugins",
+            "pages": [
+              "public-plugins/index",
+              "public-plugins/presidio-pii-redaction",
+              "public-plugins/presidio-image-pii-redaction",
+              "public-plugins/presidio-pii-detection",
+              "public-plugins/video-input-processing",
+              "public-plugins/document-input-processing",
+              "public-plugins/regex-detect",
+              "public-plugins/invisible-text",
+              "public-plugins/block-substrings",
+              "public-plugins/llama-guard-3"
+            ]
+          }
+        ]
       }
     ]
   },

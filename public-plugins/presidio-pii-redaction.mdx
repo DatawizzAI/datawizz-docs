@@ -1,0 +1,433 @@
+---
+description: Automatically detects and redacts PII from text in AI requests using
+  configurable methods including replacement, masking, hashing, or encryption before
+  the request reaches the AI model.
+title: Presidio PII Redaction
+---
+
+Automatically detects and redacts personally identifiable information (PII) from text in AI requests using configurable anonymization methods.
+
+## Overview
+
+The Text Redaction Plugin scans incoming AI requests for PII entities and redacts them before the request reaches the AI model. Unlike the Detection Plugin which blocks requests, this plugin allows requests to proceed with PII safely anonymized. It supports multiple redaction strategies and can apply different methods to different entity types.
+
+## Supported PII Types
+
+The plugin can redact 30+ entity types across multiple regions:
+
+### Personal Information
+- `PERSON` - Person names
+- `EMAIL_ADDRESS` - Email addresses
+- `PHONE_NUMBER` - Phone numbers
+- `DATE_TIME` - Dates and times
+- `LOCATION` - Geographic locations
+- `URL` - Web addresses
+- `IP_ADDRESS` - IP addresses
+
+### Financial
+- `CREDIT_CARD` - Credit card numbers
+- `CRYPTO` - Cryptocurrency wallet addresses
+- `IBAN_CODE` - International bank account numbers
+
+### United States
+- `US_SSN` - Social Security Numbers
+- `US_DRIVER_LICENSE` - Driver's license numbers
+- `US_PASSPORT` - Passport numbers
+- `US_BANK_NUMBER` - Bank account numbers
+- `US_ITIN` - Individual Taxpayer Identification Numbers
+
+### International
+- `UK_NHS` - UK National Health Service numbers
+- `SG_NRIC_FIN` - Singapore NRIC/FIN numbers
+- `AU_ABN`, `AU_ACN`, `AU_TFN`, `AU_MEDICARE` - Australian identifiers
+- `IN_PAN`, `IN_AADHAAR`, `IN_VEHICLE_REGISTRATION` - Indian identifiers
+- `ES_NIF` - Spanish tax identification
+- `IT_FISCAL_CODE`, `IT_DRIVER_LICENSE`, `IT_VAT_CODE`, `IT_PASSPORT`, `IT_IDENTITY_CARD` - Italian identifiers
+
+### Healthcare
+- `MEDICAL_LICENSE` - Medical license numbers
+- `NRP` - Medical prescriber numbers
+
+## Anonymization Methods
+
+The plugin supports five redaction strategies:
+
+### `replace`
+Substitutes PII with a fixed value.
+- **Parameters**: `new_value` (string) - Replacement text
+- **Example**: `john@example.com` → `<REDACTED>`
+
+### `redact`
+Completely removes PII from the text.
+- **Parameters**: None
+- **Example**: `My email is john@example.com` → `My email is`
+
+### `mask`
+Partially obscures PII by replacing characters.
+- **Parameters**:
+  - `masking_char` (string, default: `"*"`) - Character to use for masking
+  - `chars_to_mask` (number, default: 100) - Number of characters to mask
+  - `from_end` (boolean, default: false) - Mask from end instead of beginning
+- **Example**: `555-123-4567` → `XXX-XXX-4567` (masking first 7 chars with "X")
+
+### `hash`
+Applies one-way hashing (SHA-256) to PII.
+- **Parameters**: None
+- **Example**: `john@example.com` → `a3c7f1...` (irreversible)
+
+### `encrypt`
+Applies reversible encryption to PII.
+- **Parameters**: Encryption key (configured in Presidio)
+- **Example**: `john@example.com` → `bHj9K2...` (reversible with key)
+
+## Configuration
+
+### Basic Settings
+
+**`entities`** (optional, array of strings)
+List of PII entity types to redact. If not specified, all detected entities are redacted.
+
+**`language`** (string, default: `"en"`)
+Language code for text analysis (e.g., `"en"`, `"es"`, `"de"`).
+
+**`score_threshold`** (number, default: `0.5`)
+Minimum confidence score (0-1) required to redact an entity. Lower values catch more PII but may increase false positives.
+
+### Anonymization Configuration
+
+**`default_anonymizer`** (object, default: `{ type: "replace", new_value: "<REDACTED>" }`)
+Default anonymization method applied to all detected entities unless overridden.
+
+**Structure**:
+```json
+{
+  "type": "replace|redact|hash|mask|encrypt",
+  "new_value": "<REDACTED>",        // For 'replace' type
+  "masking_char": "*",               // For 'mask' type
+  "chars_to_mask": 4,                // For 'mask' type
+  "from_end": true                   // For 'mask' type
+}
+```
+
+**`entity_anonymizers`** (optional, object)
+Entity-specific anonymization methods that override the default. Keys are entity types.
+
+**Example**:
+```json
+{
+  "PHONE_NUMBER": {
+    "type": "mask",
+    "masking_char": "X",
+    "chars_to_mask": 4,
+    "from_end": true
+  },
+  "EMAIL_ADDRESS": {
+    "type": "replace",
+    "new_value": "<EMAIL_REDACTED>"
+  },
+  "CREDIT_CARD": {
+    "type": "hash"
+  }
+}
+```
+
+### Advanced Detection
+
+**`allow_list`** (optional, array of strings)
+Terms/patterns that should NOT be redacted, even if they match detection patterns.
+
+**`deny_list`** (optional, array of strings)
+Terms/patterns that should ALWAYS be redacted, regardless of detection confidence.
+
+**`context`** (optional, array of strings)
+Additional context words to improve detection accuracy.
+
+## Example Configurations
+
+### Basic Redaction
+```json
+{
+  "entities": ["EMAIL_ADDRESS", "PHONE_NUMBER"],
+  "default_anonymizer": {
+    "type": "replace",
+    "new_value": "[REMOVED]"
+  }
+}
+```
+
+**Input**: `"Contact me at john@example.com or 555-123-4567"`
+**Output**: `"Contact me at [REMOVED] or [REMOVED]"`
+
+### Partial Masking
+```json
+{
+  "entities": ["CREDIT_CARD", "PHONE_NUMBER"],
+  "entity_anonymizers": {
+    "CREDIT_CARD": {
+      "type": "mask",
+      "masking_char": "*",
+      "chars_to_mask": 12,
+      "from_end": false
+    },
+    "PHONE_NUMBER": {
+      "type": "mask",
+      "masking_char": "X",
+      "chars_to_mask": 6,
+      "from_end": false
+    }
+  }
+}
+```
+
+**Input**: `"Card: 4532-1234-5678-9010, Phone: 555-123-4567"`
+**Output**: `"Card: ****-****-****-9010, Phone: XXX-XXX-4567"`
+
+### Mixed Strategies
+```json
+{
+  "entities": ["EMAIL_ADDRESS", "PERSON", "US_SSN"],
+  "default_anonymizer": {
+    "type": "replace",
+    "new_value": "<REDACTED>"
+  },
+  "entity_anonymizers": {
+    "EMAIL_ADDRESS": { "type": "hash" },
+    "US_SSN": {
+      "type": "mask",
+      "masking_char": "*",
+      "chars_to_mask": 5,
+      "from_end": false
+    }
+  }
+}
+```
+
+**Input**: `"John Smith's SSN is 123-45-6789, email: john@example.com"`
+**Output**: `"<REDACTED>'s SSN is ***-**-6789, email: a3c7f1b2..."`
+
+### Whitelisting
+```json
+{
+  "entities": ["EMAIL_ADDRESS"],
+  "default_anonymizer": {
+    "type": "replace",
+    "new_value": "<EMAIL>"
+  },
+  "allow_list": ["support@company.com", "info@company.com"]
+}
+```
+
+**Input**: `"Contact support@company.com or john@example.com"`
+**Output**: `"Contact support@company.com or <EMAIL>"`
+
+## Behavior
+
+- **Fail-open**: If the plugin encounters an error, the original messages are returned unmodified
+- **Multi-message support**: Processes all messages in the request independently
+- **Preserves structure**: Maintains message format (text, arrays, multimodal content)
+- **Debug output**: Returns detailed redaction information when enabled in Gateway UI
+- **No blocking**: Always allows requests to proceed (unlike Detection Plugin)
+
+## Use Cases
+
+1. **Privacy compliance**: Ensure AI requests don't expose customer PII to third-party models
+2. **Audit logs**: Redact sensitive data before logging requests for compliance
+3. **Multi-tenant systems**: Prevent cross-tenant data leakage in shared AI infrastructure
+4. **Development/testing**: Sanitize production data for use in development environments
+5. **Selective visibility**: Show last 4 digits of credit cards while masking the rest
+
+---
+
+## Configuration Schema
+
+```json
+{
+  "type": "object",
+  "title": "PII Text Redaction Plugin Configuration",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "context": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "Context Words",
+      "description": "Additional context words to improve detection accuracy."
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "Entity Types",
+      "examples": [
+        [
+          "EMAIL_ADDRESS",
+          "PHONE_NUMBER",
+          "SSN"
+        ]
+      ],
+      "description": "List of PII entity types to redact. Supported types include: PERSON, EMAIL_ADDRESS, PHONE_NUMBER, CREDIT_CARD, SSN, IBAN_CODE, IP_ADDRESS, etc. If not specified, all detected entities will be redacted."
+    },
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "default": "en",
+      "examples": [
+        "en",
+        "es",
+        "de",
+        "fr"
+      ],
+      "description": "Language code for text analysis."
+    },
+    "deny_list": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "Deny List",
+      "examples": [
+        [
+          "confidential"
+        ]
+      ],
+      "description": "List of terms/patterns that should always be redacted."
+    },
+    "allow_list": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "Allow List",
+      "examples": [
+        [
+          "example@company.com"
+        ]
+      ],
+      "description": "List of terms/patterns that should not be redacted."
+    },
+    "score_threshold": {
+      "type": "number",
+      "title": "Score Threshold",
+      "default": 0.5,
+      "maximum": 1,
+      "minimum": 0,
+      "description": "Minimum confidence score (0-1) required to redact an entity."
+    },
+    "default_anonymizer": {
+      "type": "object",
+      "title": "Default Anonymizer",
+      "default": {
+        "type": "replace",
+        "new_value": "<REDACTED>"
+      },
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "replace",
+            "redact",
+            "hash",
+            "mask",
+            "encrypt"
+          ],
+          "type": "string",
+          "title": "Type",
+          "description": "Type of anonymization: 'replace' (substitute with value), 'redact' (remove), 'hash' (one-way hash), 'mask' (partial masking), 'encrypt' (reversible encryption)"
+        },
+        "from_end": {
+          "type": "boolean",
+          "title": "Mask from End",
+          "description": "Mask from end instead of beginning for 'mask' type"
+        },
+        "new_value": {
+          "type": "string",
+          "title": "New Value",
+          "description": "Replacement value for 'replace' type (e.g., '<REDACTED>')"
+        },
+        "masking_char": {
+          "type": "string",
+          "title": "Masking Character",
+          "description": "Character to use for 'mask' type (default: *)"
+        },
+        "chars_to_mask": {
+          "type": "number",
+          "title": "Characters to Mask",
+          "description": "Number of characters to mask for 'mask' type"
+        }
+      },
+      "description": "Default anonymization method to apply to all detected entities."
+    },
+    "entity_anonymizers": {
+      "type": "object",
+      "title": "Entity-Specific Anonymizers",
+      "examples": [
+        {
+          "CREDIT_CARD": {
+            "type": "hash"
+          },
+          "PHONE_NUMBER": {
+            "type": "mask",
+            "from_end": true,
+            "masking_char": "X",
+            "chars_to_mask": 4
+          },
+          "EMAIL_ADDRESS": {
+            "type": "replace",
+            "new_value": "<EMAIL_REDACTED>"
+          }
+        }
+      ],
+      "description": "Entity-specific anonymization methods. Keys are entity types (e.g., 'PHONE_NUMBER', 'EMAIL_ADDRESS')",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "replace",
+              "redact",
+              "hash",
+              "mask",
+              "encrypt"
+            ],
+            "type": "string",
+            "title": "Type"
+          },
+          "from_end": {
+            "type": "boolean",
+            "title": "Mask from End"
+          },
+          "new_value": {
+            "type": "string",
+            "title": "New Value"
+          },
+          "masking_char": {
+            "type": "string",
+            "title": "Masking Character"
+          },
+          "chars_to_mask": {
+            "type": "number",
+            "title": "Characters to Mask"
+          }
+        }
+      }
+    }
+  },
+  "description": "Configuration for the Presidio-based text redaction plugin that detects and redacts PII from text messages."
+}
+```
+
+
+---
+
+## Supported Phases
+
+- **Request Phase**: Supports processing during the REQUEST phase
+- **Response Phase**: Supports processing during the RESPONSE phase
+- **Log Phase**: Supports processing during the LOG phase

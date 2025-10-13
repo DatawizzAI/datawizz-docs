@@ -1,0 +1,440 @@
+---
+description: Extracts text from images via OCR, detects PII within the text, and returns
+  redacted images with sensitive information obscured to protect privacy in multimodal
+  AI requests.
+title: Presidio Image PII Redaction
+---
+
+Extracts text from images via OCR, detects PII within the text, and returns redacted images with sensitive information obscured.
+
+## Overview
+
+The Image Redaction Plugin processes images in multimodal AI requests, using Optical Character Recognition (OCR) to extract text, detecting PII within that text, and then visually redacting the sensitive areas by overlaying them with colored boxes. This prevents PII in screenshots, documents, or photos from being exposed to AI models.
+
+## How It Works
+
+1. **Image Processing**: Extracts images from message content (supports both URLs and base64 data URIs)
+2. **OCR Analysis**: Uses Tesseract OCR to extract text from images
+3. **PII Detection**: Analyzes extracted text using Microsoft Presidio to identify PII
+4. **Visual Redaction**: Overlays detected PII regions with colored boxes to obscure the text
+5. **Return Modified Images**: Returns images as base64 data URIs with PII redacted
+
+## Supported PII Types
+
+The plugin can detect and redact 30+ entity types across multiple regions:
+
+### Personal Information
+- `PERSON` - Person names
+- `EMAIL_ADDRESS` - Email addresses
+- `PHONE_NUMBER` - Phone numbers
+- `DATE_TIME` - Dates and times
+- `LOCATION` - Geographic locations
+- `URL` - Web addresses
+- `IP_ADDRESS` - IP addresses
+
+### Financial
+- `CREDIT_CARD` - Credit card numbers
+- `CRYPTO` - Cryptocurrency wallet addresses
+- `IBAN_CODE` - International bank account numbers
+
+### United States
+- `US_SSN` - Social Security Numbers
+- `US_DRIVER_LICENSE` - Driver's license numbers
+- `US_PASSPORT` - Passport numbers
+- `US_BANK_NUMBER` - Bank account numbers
+- `US_ITIN` - Individual Taxpayer Identification Numbers
+
+### International
+- `UK_NHS` - UK National Health Service numbers
+- `SG_NRIC_FIN` - Singapore NRIC/FIN numbers
+- `AU_ABN`, `AU_ACN`, `AU_TFN`, `AU_MEDICARE` - Australian identifiers
+- `IN_PAN`, `IN_AADHAAR`, `IN_VEHICLE_REGISTRATION` - Indian identifiers
+- `ES_NIF` - Spanish tax identification
+- `IT_FISCAL_CODE`, `IT_DRIVER_LICENSE`, `IT_VAT_CODE`, `IT_PASSPORT`, `IT_IDENTITY_CARD` - Italian identifiers
+
+### Healthcare
+- `MEDICAL_LICENSE` - Medical license numbers
+- `NRP` - Medical prescriber numbers
+
+## Configuration
+
+### Basic Settings
+
+**`entities`** (optional, array of strings)
+List of PII entity types to detect and redact in images. If not specified, all detected entities are redacted.
+
+**`language`** (string, default: `"en"`)
+Language code for OCR text analysis (e.g., `"en"`, `"es"`, `"de"`).
+
+**`score_threshold`** (number, default: `0.5`)
+Minimum confidence score (0-1) required to redact an entity. Lower values catch more PII but may increase false positives.
+
+### Visual Redaction Settings
+
+**`fill_color`** (string or RGB array, default: `"black"`)
+Fill color for redacted areas. Can be:
+- **Color name**: `"black"`, `"white"`, `"gray"`, `"red"`, etc.
+- **RGB tuple**: `[0, 0, 0]` for black, `[255, 255, 255]` for white, `[255, 0, 0]` for red
+
+**`padding`** (number, default: `10`)
+Padding in pixels around detected text to ensure complete coverage. Higher values provide more margin but may obscure surrounding content.
+
+### Advanced OCR Settings
+
+**`ocr_kwargs`** (optional, object)
+Additional keyword arguments to pass to the OCR engine (Tesseract). Common options:
+- `lang`: Language code (e.g., `"eng"`, `"spa"`, `"deu"`)
+- `config`: Tesseract configuration string (e.g., `"--psm 6"` for uniform text block)
+
+See [Tesseract documentation](https://tesseract-ocr.github.io/) for all available options.
+
+### Custom Pattern Recognition
+
+**`ad_hoc_recognizers`** (optional, array of objects)
+Custom regex-based recognizers for detecting domain-specific patterns not covered by standard entity types.
+
+**Structure**:
+```json
+{
+  "name": "unique_recognizer_name",
+  "supported_language": "en",
+  "patterns": ["regex_pattern_1", "regex_pattern_2"],
+  "context": ["context_word_1", "context_word_2"],
+  "supported_entity": "CUSTOM_ENTITY_TYPE"
+}
+```
+
+### Advanced Detection
+
+**`allow_list`** (optional, array of strings)
+Terms/patterns that should NOT be redacted from images, even if they match detection patterns.
+
+**`deny_list`** (optional, array of strings)
+Terms/patterns that should ALWAYS be redacted from images, regardless of detection confidence.
+
+## Example Configurations
+
+### Basic Image Redaction
+```json
+{
+  "entities": ["EMAIL_ADDRESS", "PHONE_NUMBER", "PERSON"],
+  "fill_color": "black",
+  "padding": 15
+}
+```
+
+Redacts emails, phone numbers, and names with black boxes with 15px padding.
+
+### Custom Fill Color
+```json
+{
+  "entities": ["CREDIT_CARD", "US_SSN"],
+  "fill_color": [255, 0, 0],
+  "padding": 10
+}
+```
+
+Redacts credit cards and SSNs with red (`RGB: 255, 0, 0`) boxes.
+
+### Enhanced OCR for Non-English
+```json
+{
+  "entities": ["PERSON", "LOCATION"],
+  "language": "es",
+  "ocr_kwargs": {
+    "lang": "spa",
+    "config": "--psm 6"
+  },
+  "fill_color": "gray"
+}
+```
+
+Processes Spanish text with Tesseract configured for Spanish language.
+
+### Custom Pattern Detection
+```json
+{
+  "entities": ["EMAIL_ADDRESS"],
+  "ad_hoc_recognizers": [
+    {
+      "name": "employee_id_recognizer",
+      "supported_language": "en",
+      "patterns": ["EMP-\\d{6}", "STAFF-\\d{6}"],
+      "context": ["employee", "staff", "id"],
+      "supported_entity": "EMPLOYEE_ID"
+    },
+    {
+      "name": "internal_code_recognizer",
+      "supported_language": "en",
+      "patterns": ["PROJ-[A-Z]{3}-\\d{4}"],
+      "supported_entity": "PROJECT_CODE"
+    }
+  ],
+  "fill_color": "black",
+  "padding": 12
+}
+```
+
+Detects custom patterns like `EMP-123456` or `PROJ-ABC-1234` in addition to standard emails.
+
+### High Sensitivity Mode
+```json
+{
+  "score_threshold": 0.3,
+  "padding": 20,
+  "fill_color": "white",
+  "deny_list": ["CONFIDENTIAL", "INTERNAL USE ONLY"]
+}
+```
+
+Uses lower threshold to catch more potential PII, larger padding for complete coverage, and always redacts specific terms.
+
+## Image Format Support
+
+The plugin handles multiple image input formats:
+
+### HTTP/HTTPS URLs
+```json
+{
+  "type": "image_url",
+  "image_url": {
+    "url": "https://example.com/screenshot.png"
+  }
+}
+```
+
+Plugin fetches the image, processes it, and returns redacted base64 data URI.
+
+### Base64 Data URIs
+```json
+{
+  "type": "image_url",
+  "image_url": {
+    "url": "data:image/png;base64,iVBORw0KGgoAAAANS..."
+  }
+}
+```
+
+Plugin processes the image directly and returns redacted base64 data URI.
+
+## Behavior
+
+- **Fail-open**: If the plugin encounters an error, the original messages are returned unmodified
+- **Multi-image support**: Processes all images in all messages independently
+- **Format preservation**: Maintains message structure (multimodal content arrays)
+- **URL conversion**: Converts fetched URLs to base64 data URIs for redacted images
+- **Debug output**: Returns detailed processing information when enabled in Gateway UI
+- **No blocking**: Always allows requests to proceed (unlike Detection Plugin)
+
+## Performance Considerations
+
+- **OCR latency**: Image processing takes 1-3 seconds per image depending on size and complexity
+- **Image size limits**: Large images (>10MB) may timeout; consider resizing before processing
+- **Cold starts**: First container invocation may take 2-3 seconds
+- **Base64 size**: Redacted images returned as base64 may be large; monitor response sizes
+
+## Use Cases
+
+1. **Screenshot sanitization**: Remove PII from screenshots before sharing with AI models
+2. **Document processing**: Redact sensitive information from scanned documents
+3. **Support tickets**: Process user-submitted images containing PII in customer support scenarios
+4. **Compliance**: Ensure uploaded images don't expose regulated data (HIPAA, GDPR)
+5. **Testing**: Sanitize production screenshots for use in development/testing environments
+6. **Multi-modal AI safety**: Prevent vision models from accessing PII in image content
+
+## Limitations
+
+- **OCR quality**: Detection accuracy depends on image quality, text clarity, and font legibility
+- **Handwritten text**: OCR may struggle with handwriting; results vary
+- **Complex layouts**: Dense or overlapping text may reduce detection accuracy
+- **Non-text PII**: Cannot detect faces, objects, or other non-textual PII
+- **Language support**: OCR quality varies by language; best results with Latin scripts
+
+---
+
+## Configuration Schema
+
+```json
+{
+  "type": "object",
+  "title": "PII Image Redaction Plugin Configuration",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "padding": {
+      "type": "number",
+      "title": "Padding",
+      "default": 10,
+      "description": "Padding in pixels around detected text to ensure complete redaction coverage."
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "Entity Types",
+      "examples": [
+        [
+          "EMAIL_ADDRESS",
+          "PHONE_NUMBER",
+          "PERSON"
+        ]
+      ],
+      "description": "List of PII entity types to detect and redact in images. If not specified, all detected entities will be redacted."
+    },
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "default": "en",
+      "examples": [
+        "en",
+        "es",
+        "de",
+        "fr"
+      ],
+      "description": "Language code for OCR text analysis."
+    },
+    "deny_list": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "Deny List",
+      "description": "List of terms/patterns that should always be redacted from images."
+    },
+    "allow_list": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "Allow List",
+      "description": "List of terms/patterns that should not be redacted from images."
+    },
+    "fill_color": {
+      "oneOf": [
+        {
+          "type": "string",
+          "examples": [
+            "black",
+            "white",
+            "gray"
+          ]
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "maximum": 255,
+            "minimum": 0
+          },
+          "examples": [
+            [
+              0,
+              0,
+              0
+            ]
+          ],
+          "maxItems": 3,
+          "minItems": 3
+        }
+      ],
+      "title": "Fill Color",
+      "default": "black",
+      "description": "Fill color for redacted areas. Can be color name or RGB tuple [R, G, B] (0-255)"
+    },
+    "ocr_kwargs": {
+      "type": "object",
+      "title": "OCR Arguments",
+      "examples": [
+        {
+          "lang": "eng",
+          "config": "--psm 6"
+        }
+      ],
+      "description": "Additional keyword arguments to pass to the OCR engine (Tesseract). See Tesseract documentation for available options.",
+      "additionalProperties": true
+    },
+    "score_threshold": {
+      "type": "number",
+      "title": "Score Threshold",
+      "default": 0.5,
+      "maximum": 1,
+      "minimum": 0,
+      "description": "Minimum confidence score (0-1) required to redact an entity."
+    },
+    "ad_hoc_recognizers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "supported_language",
+          "patterns",
+          "supported_entity"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Unique name for the recognizer"
+          },
+          "context": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Context Words",
+            "description": "Context words to improve detection"
+          },
+          "patterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Patterns",
+            "description": "Regex patterns to match"
+          },
+          "supported_entity": {
+            "type": "string",
+            "title": "Supported Entity",
+            "description": "Entity type this recognizer detects"
+          },
+          "supported_language": {
+            "type": "string",
+            "title": "Supported Language",
+            "description": "Language code this recognizer supports"
+          }
+        }
+      },
+      "title": "Custom Recognizers",
+      "examples": [
+        [
+          {
+            "name": "employee_id_recognizer",
+            "context": [
+              "employee",
+              "staff",
+              "id"
+            ],
+            "patterns": [
+              "EMP-\\d{6}"
+            ],
+            "supported_entity": "EMPLOYEE_ID",
+            "supported_language": "en"
+          }
+        ]
+      ],
+      "description": "Custom regex-based recognizers for detecting specific patterns in images."
+    }
+  },
+  "description": "Configuration for the Presidio-based image redaction plugin that detects and redacts PII from images using OCR."
+}
+```
+
+
+---
+
+## Supported Phases
+
+- **Request Phase**: Supports processing during the REQUEST phase
+- **Response Phase**: Supports processing during the RESPONSE phase
+- **Log Phase**: Supports processing during the LOG phase

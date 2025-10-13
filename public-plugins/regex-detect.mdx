@@ -1,0 +1,216 @@
+---
+description: Scans messages for regex patterns and rejects or redacts matches. Useful
+  for filtering sensitive information like emails, phone numbers, or credit card numbers.
+title: Regex Detect
+---
+
+The Regex Detect plugin scans user and assistant messages for specified regex patterns and can either reject requests containing matches or redact the matched content.
+
+## Features
+
+- **Flexible Pattern Matching**: Configure multiple regex patterns with optional flags
+- **Selective Scanning**: Choose to scan only the latest message or all messages in the conversation
+- **Reject or Redact**: Either block requests containing sensitive data or automatically redact it
+- **Custom Messages**: Define custom rejection messages for different patterns
+- **Configurable Redaction**: Use static text or character repetition for redaction
+
+## Use Cases
+
+- Filter sensitive information (emails, phone numbers, credit cards)
+- Enforce content policies by blocking specific patterns
+- Automatically redact PII (Personally Identifiable Information)
+- Prevent prompt injection attacks by detecting suspicious patterns
+
+## Configuration Options
+
+### `patterns` (required)
+Array of pattern objects to scan for. Each pattern object contains:
+- `regex` (string, required): The regular expression pattern to match
+- `flags` (string, optional): Regex flags (e.g., 'gi' for global case-insensitive). Default: 'g'
+- `rejectMessage` (string, optional): Custom message to return when this pattern is matched
+
+### `scanAllMessages` (boolean)
+- `true`: Scans all messages in the array
+- `false`: Only scans the latest message
+- Default: `false`
+
+### `redactMatches` (boolean)
+- `true`: Redacts matched patterns instead of rejecting the request
+- `false`: Rejects the request if a match is found
+- Default: `false`
+
+### `redactionText` (string)
+Text to replace redacted patterns with. Default: `[REDACTED]`
+
+### `redactCharacters` (string)
+If set, replaces each match with this character repeated to match the length of the original text. Overrides `redactionText` if both are set.
+
+## Example Configurations
+
+### Block Email Addresses
+
+```json
+{
+  "patterns": [
+    {
+      "regex": "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b",
+      "flags": "gi",
+      "rejectMessage": "Email addresses are not allowed in requests"
+    }
+  ],
+  "scanAllMessages": false,
+  "redactMatches": false
+}
+```
+
+### Redact Phone Numbers
+
+```json
+{
+  "patterns": [
+    {
+      "regex": "\\b\\d{3}[-.]?\\d{3}[-.]?\\d{4}\\b",
+      "flags": "g"
+    }
+  ],
+  "scanAllMessages": true,
+  "redactMatches": true,
+  "redactionText": "[PHONE]"
+}
+```
+
+### Redact Credit Cards with Character Masking
+
+```json
+{
+  "patterns": [
+    {
+      "regex": "\\b\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}\\b",
+      "flags": "g"
+    }
+  ],
+  "scanAllMessages": true,
+  "redactMatches": true,
+  "redactCharacters": "*"
+}
+```
+
+### Multiple Patterns
+
+```json
+{
+  "patterns": [
+    {
+      "regex": "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b",
+      "flags": "gi",
+      "rejectMessage": "Email addresses are not allowed"
+    },
+    {
+      "regex": "\\b\\d{3}-\\d{2}-\\d{4}\\b",
+      "flags": "g",
+      "rejectMessage": "Social Security Numbers are not allowed"
+    }
+  ],
+  "scanAllMessages": false,
+  "redactMatches": false
+}
+```
+
+## Response Behavior
+
+### When Rejecting (redactMatches: false)
+- Returns `reject: true` with a rejection reason
+- Uses custom `rejectMessage` if provided, otherwise a default message
+- No messages are modified
+
+### When Redacting (redactMatches: true)
+- Returns modified messages array with redacted content
+- Original request continues through the pipeline
+- Debug logs indicate how many matches were redacted
+
+## Common Regex Patterns
+
+- **Email**: `\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b`
+- **US Phone**: `\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`
+- **Credit Card**: `\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b`
+- **SSN**: `\b\d{3}-\d{2}-\d{4}\b`
+- **IP Address**: `\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b`
+- **URL**: `https?://[^\s]+`
+
+## Notes
+
+- Patterns are tested in order; the first match determines the rejection message
+- Invalid regex patterns are logged in debug output but don't fail the request
+- The 'g' (global) flag is recommended for finding all matches
+- When using `redactCharacters`, the replacement length always matches the original
+
+---
+
+## Configuration Schema
+
+```json
+{
+  "type": "object",
+  "title": "Regex Detect Configuration",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "required": [
+    "patterns"
+  ],
+  "properties": {
+    "patterns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "regex"
+        ],
+        "properties": {
+          "flags": {
+            "type": "string",
+            "title": "Regex Flags",
+            "default": "g",
+            "description": "Optional regex flags (e.g., 'gi' for global case-insensitive)"
+          },
+          "regex": {
+            "type": "string",
+            "title": "Regular Expression",
+            "description": "The regex pattern to match (e.g., \\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b for emails)"
+          },
+          "rejectMessage": {
+            "type": "string",
+            "title": "Custom Reject Message",
+            "description": "Custom message to return when this pattern is matched"
+          }
+        }
+      },
+      "title": "Regex Patterns",
+      "minItems": 1,
+      "description": "List of regex patterns to scan for"
+    },
+    "redactMatches": {
+      "type": "boolean",
+      "title": "Redact Matches",
+      "default": false,
+      "description": "If true, redacts matched patterns instead of rejecting the request"
+    },
+    "redactionText": {
+      "type": "string",
+      "title": "Redaction Text",
+      "default": "[REDACTED]",
+      "description": "Text to replace redacted patterns with"
+    },
+    "scanAllMessages": {
+      "type": "boolean",
+      "title": "Scan All Messages",
+      "default": false,
+      "description": "If true, scans all messages. If false, only scans the latest message"
+    },
+    "redactCharacters": {
+      "type": "string",
+      "title": "Redact Characters",
+      "description": "If set, replaces each match with this character repeated to match the original length. Overrides redactionText"
+    }
+  },
+  "description": "Configuration for the Regex Detect plugin"
+}
+```

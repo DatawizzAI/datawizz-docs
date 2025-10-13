@@ -1,0 +1,283 @@
+---
+description: Blocks or redacts requests containing specific substrings. Useful for
+  filtering unwanted content or enforcing content policies.
+title: Block Substrings
+---
+
+The Block Substrings plugin scans messages for specific substrings and can either reject requests containing those substrings or automatically redact them. This is useful for enforcing content policies, filtering profanity, blocking competitor mentions, or preventing sensitive keywords.
+
+## Features
+
+- **Simple Substring Matching**: Configure a list of substrings to detect
+- **Case Sensitivity Control**: Choose case-sensitive or case-insensitive matching
+- **Selective Scanning**: Scan only the latest message or all messages
+- **Reject or Redact**: Either block requests or automatically redact matched content
+- **Configurable Redaction**: Use static text or character repetition for redaction
+- **Multiple Matches**: Handles multiple occurrences of substrings
+
+## Use Cases
+
+- Block profanity or offensive language
+- Prevent competitor brand mentions
+- Enforce content policies by blocking specific keywords
+- Redact internal code names or project names
+- Filter out specific phrases or terms
+- Implement custom content moderation rules
+
+## Configuration Options
+
+### `substrings` (required)
+Array of strings to search for in messages. Each string is matched as a substring (not whole word).
+
+### `rejectMessage` (string)
+Custom message to return when a substring is found and `redactMatches` is false.
+Default: `"Request contains forbidden content"`
+
+### `scanAllMessages` (boolean)
+- `true`: Scans all messages in the array
+- `false`: Only scans the latest message
+- Default: `false`
+
+### `caseSensitive` (boolean)
+- `true`: Substring matching is case-sensitive
+- `false`: Substring matching is case-insensitive
+- Default: `false`
+
+### `redactMatches` (boolean)
+- `true`: Redacts matched substrings instead of rejecting
+- `false`: Rejects the request if a match is found
+- Default: `false`
+
+### `redactionText` (string)
+Text to replace redacted substrings with.
+Default: `[REDACTED]`
+
+### `redactCharacters` (string)
+If set, replaces each match with this character repeated to match the length of the original text. Overrides `redactionText` if both are set.
+
+## Example Configurations
+
+### Block Profanity
+
+```json
+{
+  "substrings": ["badword1", "badword2", "offensive"],
+  "rejectMessage": "Your message contains inappropriate language",
+  "scanAllMessages": true,
+  "caseSensitive": false,
+  "redactMatches": false
+}
+```
+
+### Block Competitor Mentions
+
+```json
+{
+  "substrings": ["CompetitorA", "CompetitorB", "rival-product"],
+  "rejectMessage": "Please refrain from mentioning competitor products",
+  "scanAllMessages": false,
+  "caseSensitive": false,
+  "redactMatches": false
+}
+```
+
+### Redact Internal Code Names
+
+```json
+{
+  "substrings": ["ProjectX", "SecretFeature", "Alpha-2024"],
+  "scanAllMessages": true,
+  "caseSensitive": true,
+  "redactMatches": true,
+  "redactionText": "[INTERNAL]"
+}
+```
+
+### Redact with Character Masking
+
+```json
+{
+  "substrings": ["password", "secret", "confidential"],
+  "scanAllMessages": true,
+  "caseSensitive": false,
+  "redactMatches": true,
+  "redactCharacters": "*"
+}
+```
+
+### Case-Sensitive Exact Matches
+
+```json
+{
+  "substrings": ["API_KEY", "SECRET_TOKEN"],
+  "rejectMessage": "Please do not include API keys or tokens",
+  "scanAllMessages": true,
+  "caseSensitive": true,
+  "redactMatches": false
+}
+```
+
+## Response Behavior
+
+### When Rejecting (redactMatches: false)
+- Returns `reject: true` with the configured rejection message
+- First matched substring triggers the rejection
+- No messages are modified
+- Debug logs show total number of matches
+
+### When Redacting (redactMatches: true)
+- Returns modified messages array with redacted content
+- All occurrences of all substrings are redacted
+- Original request continues through the pipeline
+- Debug logs indicate how many matches were redacted
+
+## Matching Behavior
+
+### Substring vs Whole Word
+The plugin performs substring matching, not whole-word matching:
+- Substring `"test"` matches: "test", "testing", "contest", "latest"
+- To match whole words only, include surrounding spaces in your substring (e.g., `" test "`)
+
+### Case Sensitivity
+When `caseSensitive: false`:
+- Substring `"Test"` matches: "test", "TEST", "Test", "tEsT"
+
+When `caseSensitive: true`:
+- Substring `"Test"` only matches: "Test"
+- Does not match: "test", "TEST", "tEsT"
+
+### Multiple Occurrences
+All occurrences of each substring are detected and processed:
+- Input: `"test test test"`
+- Substring: `"test"`
+- Result: All three occurrences are found and redacted
+
+## Example Scenarios
+
+### Scenario 1: Block Profanity
+
+**Configuration**:
+```json
+{
+  "substrings": ["badword"],
+  "caseSensitive": false,
+  "redactMatches": false,
+  "rejectMessage": "Inappropriate language detected"
+}
+```
+
+**Input**: `"This is a badword in the text"`
+
+**Result**: Request rejected with message "Inappropriate language detected"
+
+### Scenario 2: Redact Competitor Names
+
+**Configuration**:
+```json
+{
+  "substrings": ["CompetitorX"],
+  "caseSensitive": true,
+  "redactMatches": true,
+  "redactionText": "[COMPETITOR]"
+}
+```
+
+**Input**: `"Have you tried CompetitorX product?"`
+
+**Output**: `"Have you tried [COMPETITOR] product?"`
+
+### Scenario 3: Mask Sensitive Terms
+
+**Configuration**:
+```json
+{
+  "substrings": ["password"],
+  "caseSensitive": false,
+  "redactMatches": true,
+  "redactCharacters": "*"
+}
+```
+
+**Input**: `"My password is secret123"`
+
+**Output**: `"My ******** is secret123"`
+
+## Debug Information
+
+The plugin provides detailed debug information including:
+- Number of messages scanned
+- Case sensitivity mode
+- Total matches found
+- Number of unique matches (when redacting)
+- Action taken (blocked or redacted)
+
+## Technical Notes
+
+- Empty substrings are ignored
+- Handles both string and array content formats
+- Preserves non-text content (images, audio, etc.)
+- When case-insensitive, original case is preserved in redaction
+- Duplicate replacements are deduplicated to improve performance
+- All occurrences of each substring are found, not just the first
+
+---
+
+## Configuration Schema
+
+```json
+{
+  "type": "object",
+  "title": "Block Substrings Configuration",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "required": [
+    "substrings"
+  ],
+  "properties": {
+    "substrings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "Substrings to Block",
+      "minItems": 1,
+      "description": "List of substrings to scan for and block/redact"
+    },
+    "caseSensitive": {
+      "type": "boolean",
+      "title": "Case Sensitive",
+      "default": false,
+      "description": "If true, substring matching is case sensitive"
+    },
+    "redactMatches": {
+      "type": "boolean",
+      "title": "Redact Matches",
+      "default": false,
+      "description": "If true, redacts matched substrings instead of rejecting the request"
+    },
+    "redactionText": {
+      "type": "string",
+      "title": "Redaction Text",
+      "default": "[REDACTED]",
+      "description": "Text to replace redacted substrings with"
+    },
+    "rejectMessage": {
+      "type": "string",
+      "title": "Reject Message",
+      "default": "Request contains forbidden content",
+      "description": "Custom message to return when a substring is found (when not redacting)"
+    },
+    "scanAllMessages": {
+      "type": "boolean",
+      "title": "Scan All Messages",
+      "default": false,
+      "description": "If true, scans all messages. If false, only scans the latest message"
+    },
+    "redactCharacters": {
+      "type": "string",
+      "title": "Redact Characters",
+      "description": "If set, replaces each match with this character repeated to match the original length. Overrides redactionText"
+    }
+  },
+  "description": "Configuration for the Block Substrings plugin"
+}
+```

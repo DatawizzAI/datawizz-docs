@@ -1,0 +1,42 @@
+---
+title: 'Public Plugins'
+description: 'Pre-built plugins for common use cases'
+---
+
+Datawizz provides a collection of pre-built plugins that you can use in your endpoints without writing any custom code. These public plugins cover common use cases like content filtering, PII detection, compliance checks, and more.
+
+## Available Plugins
+
+Browse our collection of public plugins below. Click on any plugin to view detailed documentation and configuration options.
+
+| Plugin | Description | Phases |
+|--------|-------------|--------|
+| [Presidio PII Redaction](./presidio-pii-redaction) | Automatically detects and redacts PII from text in AI requests using configurable methods including replacement, masking, hashing, or encryption before the request reaches the AI model. | REQUEST, RESPONSE, LOG |
+| [Presidio Image PII Redaction](./presidio-image-pii-redaction) | Extracts text from images via OCR, detects PII within the text, and returns redacted images with sensitive information obscured to protect privacy in multimodal AI requests. | REQUEST, RESPONSE, LOG |
+| [Presidio PII Detection](./presidio-pii-detection) | Analyzes AI requests for personally identifiable information (PII) using Microsoft Presidio and blocks requests containing sensitive data like emails, phone numbers, SSNs, and credit cards. | REQUEST, RESPONSE, LOG |
+| [Video Input Processing](./video-input-processing) | Transform videos into LLM-compatible content by extracting frames, audio, and transcripts. Supports YouTube, TikTok, direct URLs, and works with any vision-enabled LLM. | REQUEST |
+| [Document Input Processing](./document-input-processing) | Convert PDFs, Word, PowerPoint, and Excel documents into clean markdown for LLM processing. Uses Microsoft's MarkItDown with optional LLM-powered image descriptions. | REQUEST |
+| [Regex Detect](./regex-detect) | Scans messages for regex patterns and rejects or redacts matches. Useful for filtering sensitive information like emails, phone numbers, or credit card numbers. | - |
+| [Invisible Text](./invisible-text) | Detects and removes non-printable, invisible Unicode characters to maintain text integrity and prevent steganography-based attacks. | - |
+| [Block Substrings](./block-substrings) | Blocks or redacts requests containing specific substrings. Useful for filtering unwanted content or enforcing content policies. | - |
+| [Llama Guard 3](./llama-guard-3) | Uses Meta's Llama Guard 3 model for content safety classification. Can detect and block unsafe content across 14 hazard categories including violence, hate speech, self-harm, and more. | - |
+
+---
+
+## Using Public Plugins
+
+To use a public plugin in your endpoint:
+
+1. Navigate to your endpoint configuration in the Datawizz dashboard
+2. Select the "Plugins" tab
+3. Click "Add Plugin"
+4. Choose "Public Plugins" from the plugin source dropdown
+5. Select the plugin you want to use
+6. Configure the plugin settings (phase, priority, async execution, etc.)
+7. Save your endpoint configuration
+
+For more information on plugin configuration and execution, see the [Plugins documentation](/plugins/plugins).
+
+## Need a Custom Plugin?
+
+If you need functionality that isn't covered by our public plugins, you can build your own custom plugin. See [Building Custom Plugins](/plugins/build-custom-plugins) for details.

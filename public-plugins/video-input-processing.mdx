@@ -1,0 +1,343 @@
+---
+description: Transform videos into LLM-compatible content by extracting frames, audio,
+  and transcripts. Supports YouTube, TikTok, direct URLs, and works with any vision-enabled
+  LLM.
+title: Video Input Processing
+---
+
+Make it easy to send videos to LLMs and have them reason about video content by automatically extracting frames, audio, and transcripts.
+
+## Overview
+
+Many LLMs are limited to processing text, and in some cases images and audio. This plugin extends native LLM capabilities by pre-processing videos into content that LLMs can understand. The plugin automatically detects video URLs in your messages and converts them into image frames, audio tracks, and transcripts that can be processed by vision-enabled and audio-enabled language models.
+
+This processing is compatible with **all LLMs** - you can select any LLM you want to use for reasoning about the video content.
+
+## Features
+
+- **Source Flexibility**: Supports downloading videos from URLs, including services like YouTube, Vimeo, TikTok and more
+  - **Proxy Support**: Can use residential proxies automatically to download videos from geo-restricted services
+- **Frame Extraction**: Extract frames at configurable intervals (by FPS or total frame count)
+- **Timestamp Overlay**: Burn timestamps into frames for temporal reasoning. Useful for identifying when events occur in videos (format: HH:MM:SS.ss)
+- **Audio Support**: Extract and include audio from videos (**requires LLMs that support audio input**)
+- **Transcription**: Generate transcripts using OpenAI's `gpt-4o-transcribe` model
+- **Video Trimming**: Process only specific segments using start/end offsets
+- **Resolution Control**: Adjust frame resolution to control LLM processing costs
+
+## Installation
+
+1. Add the plugin to your Datawizz endpoint configuration
+2. Set the endpoint URL to: `https://your-service-url/plugin/video`
+3. Configure the Authorization header with your secret token:
+   - Header name: `Authorization`
+   - Header value: `Bearer YOUR_SECRET_TOKEN`
+4. Optionally configure default settings (see Configuration below)
+
+## Configuration
+
+You can specify configurations to control how the video is processed. All options are optional and have sensible defaults:
+
+### Sampling Options
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| `sample_fps` | integer | Number of frames to extract per second | `1` |
+| `sample_frames` | integer | Total number of frames to extract. If supplied, will be used instead of FPS, and the frames will be extracted equally spaced throughout the video | None |
+| `detail_level` | string | Resolution quality for frames: `"low"` (512px), `"medium"` (768px), or `"high"` (1024px). Most LLMs charge based on image resolution, so use this to control costs | None (original resolution) |
+
+### Visual Options
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| `burn_timestamps` | boolean | Whether to burn timestamps into the frames. Useful for reasoning about events in the video. Timestamps have the format HH:MM:SS.ss | `true` |
+| `timestamp_location` | string | Position of timestamps on frames: `"bottom-left"`, `"bottom-right"`, `"top-left"`, `"top-right"`. Use this to position the timestamp where it's less likely to hide important visual information | `"bottom-left"` |
+
+### Audio & Transcription Options
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| `include_audio` | boolean | If true, will send the video's audio track to the LLM (**Can only be used with LLMs that support audio input**) | `false` |
+| `include_transcript` | boolean | If true, will generate and send the video's transcript to the LLM using OpenAI `gpt-4o-transcribe` | `false` |
+| `transcript_language` | string | Language code for transcript generation (e.g., `"en"`, `"es"`, `"fr"`) | None (auto-detect) |
+
+### Download Options
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| `use_proxy` | boolean | Whether to use a residential proxy to download the video | `false` |
+| `proxy_country` | string | Country code for proxy location (e.g., `"us"`, `"uk"`, `"de"`) | None (global) |
+| `filetype` | string | File type of the video (`mp4`, `webm`, `mov`, `avi`, etc.) | None (inferred from mime type) |
+
+### Trimming Options
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| `start_offset` | integer | Process the video from a specific timestamp (in seconds) | `0` |
+| `end_offset` | integer | Process the video until a specific timestamp (in seconds) | None (end of video) |
+
+## Usage
+
+Send video attachments as part of a message to the LLM (similar to sending images):
+
+### Example: Video with Text
+
+**Input Message:**
+```json
+{
+  "role": "user",
+  "content": [
+    {
+      "type": "text",
+      "text": "Can you describe what's in the video below? I have included some frames from the video with timestamps burned in, as well as the transcript from the video"
+    },
+    {
+      "type": "video_url",
+      "video_url": {
+        "url": "https://www.youtube.com/watch?v=R9RRtMCdmSY",
+        "sample_fps": 1
+      }
+    }
+  ]
+}
+```
+
+**What happens:**
+The plugin automatically replaces the `video_url` content with image frames (and optionally transcript text). Your prompt should explain to the LLM that these are frames from the video, and that the transcript is a transcription of the audio.
+
+**Output to LLM:**
+```json
+{
+  "role": "user",
+  "content": [
+    {
+      "type": "text",
+      "text": "Can you describe what's in the video below? I have included some frames from the video with timestamps burned in, as well as the transcript from the video"
+    },
+    {
+      "type": "image_url",
+      "image_url": {
+        "url": "data:image/jpeg;base64,..."
+      }
+    },
+    {
+      "type": "image_url",
+      "image_url": {
+        "url": "data:image/jpeg;base64,..."
+      }
+    },
+    {
+      "type": "text",
+      "text": "[transcript text here]"
+    }
+  ]
+}
+```
+
+## Supported Video Sources
+
+- Direct video file URLs (`.mp4`, `.avi`, `.mov`, `.mkv`, `.webm`)
+- YouTube videos
+- TikTok videos
+- Any video URL that can be downloaded
+
+### Prompting Tips
+
+**Important:** Your prompt should explain to the LLM what content it's receiving:
+- Mention that you're providing frames from a video
+- If using timestamps, explain that timestamps are burned into the frames
+- If including a transcript, mention that it's a transcription of the audio
+
+**Pro Tip:** You can combine video processing with other LLM features like structured output to generate structured insights from videos. If using timestamps, you can use structured output for event identification in videos.
+
+## Message Format Requirements
+
+The plugin ONLY processes structured multimodal content with explicit `video_url` type. Plain string URLs like `"content": "https://example.com/video.mp4"` will NOT be processed.
+
+Videos must be in this format:
+
+```json
+{
+  "type": "video_url",
+  "video_url": {
+    "url": "https://...",
+    "sample_fps": 1  // optional inline config
+  }
+}
+```
+
+Or simply:
+
+```json
+{
+  "type": "video_url",
+  "video_url": "https://..."
+}
+```
+
+## Example Configuration
+
+```json
+{
+  "sample_fps": 2,
+  "detail_level": "medium",
+  "burn_timestamps": true,
+  "timestamp_location": "bottom-right",
+  "include_transcript": true,
+  "transcript_language": "en"
+}
+```
+
+This configuration will:
+- Extract 2 frames per second
+- Use medium resolution (768px longest side) to control LLM costs
+- Add timestamps in the bottom-right corner
+- Include a transcript in English using OpenAI's transcription service
+
+## Performance Notes
+
+- Processing time depends on video length and configuration
+- Higher `sample_fps` or `sample_frames` values increase processing time
+- Transcription requires audio extraction and may add significant processing time
+- Frame resolution affects LLM processing costs - most LLMs charge based on image resolution
+- The plugin gracefully handles errors - if processing fails, the original message is preserved
+
+---
+
+## Configuration Schema
+
+```json
+{
+  "type": "object",
+  "title": "Video Processing Plugin Configuration",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "filetype": {
+      "type": "string",
+      "title": "File Type",
+      "default": null,
+      "examples": [
+        "mp4",
+        "avi",
+        "mov",
+        "mkv",
+        "webm"
+      ],
+      "description": "Expected video file format (auto-detected if not specified)"
+    },
+    "use_proxy": {
+      "type": "boolean",
+      "title": "Use Proxy",
+      "default": false,
+      "description": "Enable proxy for downloading videos (useful for geo-restricted content)"
+    },
+    "end_offset": {
+      "type": "integer",
+      "title": "End Offset",
+      "default": null,
+      "minimum": 0,
+      "description": "End time in seconds (for trimming video before processing)"
+    },
+    "sample_fps": {
+      "type": "integer",
+      "title": "Sample FPS",
+      "default": 1,
+      "maximum": 30,
+      "minimum": 1,
+      "description": "Number of frames to extract per second of video"
+    },
+    "detail_level": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "type": "string",
+      "title": "Detail Level",
+      "default": null,
+      "examples": [
+        "medium"
+      ],
+      "description": "Resolution quality for extracted frames"
+    },
+    "start_offset": {
+      "type": "integer",
+      "title": "Start Offset",
+      "default": null,
+      "minimum": 0,
+      "description": "Start time in seconds (for trimming video before processing)"
+    },
+    "include_audio": {
+      "type": "boolean",
+      "title": "Include Audio",
+      "default": false,
+      "description": "Extract and include audio from the video"
+    },
+    "proxy_country": {
+      "type": "string",
+      "title": "Proxy Country",
+      "default": null,
+      "examples": [
+        "us",
+        "uk",
+        "de",
+        "fr",
+        "jp"
+      ],
+      "description": "Country code for proxy location (e.g., 'us', 'uk', 'de'). Only used if use_proxy is true"
+    },
+    "sample_frames": {
+      "type": "integer",
+      "title": "Sample Frames",
+      "default": null,
+      "minimum": 1,
+      "description": "Total number of frames to extract (overrides sample_fps if set)"
+    },
+    "burn_timestamps": {
+      "type": "boolean",
+      "title": "Burn Timestamps",
+      "default": true,
+      "description": "Overlay timestamp on each frame showing the time in the video"
+    },
+    "include_transcript": {
+      "type": "boolean",
+      "title": "Include Transcript",
+      "default": false,
+      "description": "Generate and include a transcript of the video audio"
+    },
+    "timestamp_location": {
+      "enum": [
+        "bottom-left",
+        "bottom-right",
+        "top-left",
+        "top-right"
+      ],
+      "type": "string",
+      "title": "Timestamp Location",
+      "default": "bottom-left",
+      "description": "Position of burned-in timestamps on frames"
+    },
+    "transcript_language": {
+      "type": "string",
+      "title": "Transcript Language",
+      "default": null,
+      "examples": [
+        "en",
+        "es",
+        "fr",
+        "de",
+        "ja"
+      ],
+      "description": "Language code for transcript generation (e.g., 'en', 'es', 'fr')"
+    }
+  },
+  "description": "Configuration for the video processing plugin that converts video URLs into LLM-compatible image frames",
+  "additionalProperties": false
+}
+```
+
+
+---
+
+## Supported Phases
+
+- **Request Phase**: Supports processing during the REQUEST phase

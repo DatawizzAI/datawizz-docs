@@ -1,0 +1,339 @@
+---
+description: Uses Meta's Llama Guard 3 model for content safety classification. Can
+  detect and block unsafe content across 14 hazard categories including violence,
+  hate speech, self-harm, and more.
+title: Llama Guard 3
+---
+
+The Llama Guard 3 plugin uses Meta's Llama-3.1-8B model, fine-tuned for content safety classification. It can classify content in both LLM inputs (prompt classification) and responses (response classification), detecting violations across 14 different hazard categories.
+
+## Features
+
+- **Dual Deployment Support**: Works with Cloudflare Workers AI binding (zero-latency) or REST API fallback (for standalone binaries)
+- **14 Hazard Categories**: Detects violence, hate speech, sexual content, self-harm, and more
+- **Flexible Actions**: Either reject unsafe requests or log warnings while allowing them through
+- **Conversation-Aware**: Can scan individual messages or entire conversation history
+- **Token Usage Tracking**: Reports token consumption for monitoring and cost control
+
+## Hazard Categories
+
+Llama Guard 3 detects the following categories (S1-S14):
+
+- **S1**: Violent Crimes
+- **S2**: Non-Violent Crimes
+- **S3**: Sex-Related Crimes
+- **S4**: Child Sexual Exploitation
+- **S5**: Defamation
+- **S6**: Specialized Advice (financial, medical, legal)
+- **S7**: Privacy Violations
+- **S8**: Intellectual Property
+- **S9**: Indiscriminate Weapons
+- **S10**: Hate Speech
+- **S11**: Suicide & Self-Harm
+- **S12**: Sexual Content
+- **S13**: Elections
+- **S14**: Code Interpreter Abuse
+
+## Configuration Options
+
+### `action` (string)
+- `reject`: Block requests containing unsafe content (default)
+- `warn`: Log warnings but allow requests to proceed
+- Default: `"reject"`
+
+### `scanAllMessages` (boolean)
+- `true`: Scans all messages in the conversation
+- `false`: Only scans the latest message
+- Default: `false`
+
+### `rejectMessage` (string)
+- Custom message to return when content is rejected
+- If not provided, returns a message listing violated categories
+- Example: `"Your message violates our content policy"`
+
+### `temperature` (number)
+- Controls randomness in model output (0-5)
+- Lower values = more consistent classification
+- Default: `0.6`
+
+### `maxTokens` (integer)
+- Maximum tokens to generate in response (1-2048)
+- Default: `256`
+
+### `cloudflareAccountId` (string)
+- Required for REST API fallback (standalone binary)
+- Your Cloudflare Account ID
+- Not needed when running in Cloudflare Workers
+
+### `cloudflareAuthToken` (string)
+- Required for REST API fallback (standalone binary)
+- Cloudflare API token with Workers AI access
+- Not needed when running in Cloudflare Workers
+
+## Example Configurations
+
+### Basic Usage (Cloudflare Workers)
+
+```json
+{
+  "action": "reject",
+  "scanAllMessages": false
+}
+```
+
+### Scan Entire Conversation
+
+```json
+{
+  "action": "reject",
+  "scanAllMessages": true,
+  "rejectMessage": "This conversation contains content that violates our safety policies."
+}
+```
+
+### Warning Mode (Non-Blocking)
+
+```json
+{
+  "action": "warn",
+  "scanAllMessages": true
+}
+```
+
+### Standalone Binary with REST API
+
+```json
+{
+  "action": "reject",
+  "scanAllMessages": false,
+  "cloudflareAccountId": "your-account-id",
+  "cloudflareAuthToken": "your-api-token",
+  "temperature": 0.5,
+  "maxTokens": 256
+}
+```
+
+## Response Behavior
+
+### When Content is Safe
+- Request proceeds normally
+- No modifications to messages
+- Debug logs indicate "Content classified as SAFE"
+
+### When Content is Unsafe (action: "reject")
+- Request is blocked
+- Returns rejection reason with violated categories
+- Example: `"Content safety check failed. Violated categories: S10, S11"`
+
+### When Content is Unsafe (action: "warn")
+- Request proceeds with warning in debug logs
+- No modifications to messages
+- Warning includes violated categories
+- Useful for monitoring without blocking users
+
+### On Error
+- Plugin fails gracefully
+- Request is allowed to proceed with warning in debug
+- Error details logged for troubleshooting
+
+## Deployment Modes
+
+### Cloudflare Workers (Recommended)
+Uses the native AI binding for zero-latency, cost-efficient inference:
+
+```typescript
+// Worker automatically uses env.AI binding
+// No additional configuration needed
+```
+
+Advantages:
+- ✅ Zero cold start
+- ✅ Lower latency
+- ✅ No auth tokens needed
+- ✅ Integrated billing
+
+### Standalone Binary (REST API Fallback)
+Uses Cloudflare's REST API when AI binding is not available:
+
+```json
+{
+  "cloudflareAccountId": "abc123...",
+  "cloudflareAuthToken": "token_xyz..."
+}
+```
+
+Advantages:
+- ✅ Works outside Cloudflare Workers
+- ✅ Self-hosted deployment
+- ✅ Same model and accuracy
+
+## Use Cases
+
+### Content Moderation
+Block harmful content before it reaches your LLM:
+```json
+{
+  "action": "reject",
+  "scanAllMessages": false,
+  "rejectMessage": "Your message contains inappropriate content."
+}
+```
+
+### Conversation Safety
+Monitor entire conversations for policy violations:
+```json
+{
+  "action": "reject",
+  "scanAllMessages": true
+}
+```
+
+### Compliance Monitoring
+Log safety issues without blocking users:
+```json
+{
+  "action": "warn",
+  "scanAllMessages": true
+}
+```
+
+### Fine-Grained Control
+Adjust temperature for stricter or looser classification:
+```json
+{
+  "action": "reject",
+  "temperature": 0.3,
+  "rejectMessage": "Content policy violation detected"
+}
+```
+
+## Performance
+
+- **Cloudflare Workers**: ~100-200ms latency
+- **REST API**: ~200-500ms latency (depending on network)
+- **Token Usage**: Typically 50-200 tokens per request
+- **Cost**: $0.48 per 1M input tokens, $0.03 per 1M output tokens
+
+## Limitations
+
+- **Message Format**: Only processes `user` and `assistant` roles (system/developer/tool messages treated as user)
+- **Text Only**: Images, audio, and other media are not analyzed
+- **Language**: Optimized for English, may have reduced accuracy in other languages
+- **Context Length**: Limited by model's context window (~8K tokens)
+
+## Troubleshooting
+
+### Error: "cloudflareAccountId and cloudflareAuthToken are required"
+**Cause**: Running outside Cloudflare Workers without REST API credentials
+
+**Solution**: Add your Cloudflare Account ID and API token to the configuration
+
+### Error: "Cloudflare API error (401)"
+**Cause**: Invalid or expired API token
+
+**Solution**:
+1. Generate a new API token at https://dash.cloudflare.com/profile/api-tokens
+2. Ensure it has "Workers AI" permissions
+3. Update `cloudflareAuthToken` in configuration
+
+### False Positives
+**Cause**: Model may flag legitimate content
+
+**Solution**:
+- Increase `temperature` (e.g., 0.8) for less strict classification
+- Use `action: "warn"` to monitor without blocking
+- Review debug logs to understand classification reasoning
+
+### High Latency
+**Cause**: Using REST API instead of Workers AI binding
+
+**Solution**:
+- Deploy to Cloudflare Workers for optimal performance
+- Consider caching results for repeated content
+- Use `scanAllMessages: false` to scan only recent messages
+
+## Integration Examples
+
+### With Prompt Engineering
+```json
+{
+  "action": "reject",
+  "scanAllMessages": false,
+  "rejectMessage": "Please rephrase your message to comply with our content guidelines."
+}
+```
+
+### With Logging Plugin
+```json
+{
+  "action": "warn",
+  "scanAllMessages": true
+}
+```
+Safety warnings will be included in log metadata for analysis.
+
+### Multi-Layer Protection
+Use alongside other plugins for defense-in-depth:
+1. **Regex Detect**: Block obvious patterns (profanity, PII)
+2. **Llama Guard**: Catch nuanced safety issues
+3. **Invisible Text**: Prevent steganography attacks
+
+## Further Reading
+
+- [Llama Guard 3 Model Card](https://developers.cloudflare.com/workers-ai/models/llama-guard-3-8b/)
+- [Cloudflare Workers AI Documentation](https://developers.cloudflare.com/workers-ai/)
+- [Content Safety Best Practices](https://ai.meta.com/llama/responsible-use-guide/)
+
+---
+
+## Configuration Schema
+
+```json
+{
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "required": [],
+  "properties": {
+    "action": {
+      "enum": [
+        "reject",
+        "warn"
+      ],
+      "type": "string",
+      "default": "reject",
+      "description": "Action to take when unsafe content is detected. 'reject' blocks the request, 'warn' logs a warning but allows it."
+    },
+    "maxTokens": {
+      "type": "integer",
+      "default": 256,
+      "maximum": 2048,
+      "minimum": 1,
+      "description": "Maximum number of tokens to generate in the response."
+    },
+    "temperature": {
+      "type": "number",
+      "default": 0.6,
+      "maximum": 5,
+      "minimum": 0,
+      "description": "Controls randomness in Llama Guard output. Higher values produce more varied results."
+    },
+    "rejectMessage": {
+      "type": "string",
+      "description": "Custom message to return when content is rejected. If not provided, a default message with violation categories will be used."
+    },
+    "scanAllMessages": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, scans all messages in the conversation. If false, only scans the last message."
+    },
+    "cloudflareAccountId": {
+      "type": "string",
+      "description": "Cloudflare Account ID (required when running outside of Cloudflare Workers, e.g., in standalone binary)"
+    },
+    "cloudflareAuthToken": {
+      "type": "string",
+      "description": "Cloudflare API auth token (required when running outside of Cloudflare Workers)"
+    }
+  }
+}
+```
