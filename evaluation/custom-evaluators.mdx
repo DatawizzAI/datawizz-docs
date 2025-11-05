@@ -18,23 +18,40 @@ Code evaluators provide the ultimate flexibility for custom evaluation logic. Th
 
 ### Runtime Environment
 
-Your Python code runs in a sandboxed environment with the following specifications:
+Your Python code runs in an isolated environment with the following specifications:
 
-- **Python runtime**: 3.13
-- **Execution time limit**: 5 seconds per evaluation
-- **Memory limit**: 512 MB per evaluation
-- **Pre-installed libraries**:
-  - `transformers==4.39.3` - For working with transformer models and tokenizers
-  - `datasets==3.2.0` - Dataset manipulation and loading
-  - `importlib-metadata==8.6.1` - Package metadata utilities
-  - `chevron==0.14.0` - Logic-less templating
-  - `evaluate==0.4.0` - Evaluation metrics library
-  - `rouge-score==0.1.2` - ROUGE metrics for text summarization
-  - `jiwer==3.0.5` - Word Error Rate and other speech recognition metrics
-  - `sacrebleu==2.5.1` - BLEU score for machine translation
-  - `bert_score==0.3.13` - Semantic similarity using BERT embeddings
-  - `scikit-learn==1.6.1` - Machine learning algorithms and metrics
-  - `numpy==1.26.4` - Numerical computing
+- **Python runtime**: 3.8+
+- **Execution time limit**: 5 minutes per evaluation
+- **Memory limit**: Reasonable limits for typical evaluation tasks
+- **Package Management**: You specify your own dependencies using PEP 723 inline script metadata
+- **No Pre-installed Libraries**: You must declare all dependencies you need
+
+**Declaring Dependencies:**
+
+Use PEP 723 inline script metadata at the top of your evaluator code to specify required packages:
+
+```python
+# /// script
+# requires-python = ">=3.8"
+# dependencies = [
+#   "evaluate>=0.4.0",
+#   "rouge-score>=0.1.2",
+#   "numpy>=1.21.0"
+# ]
+# ///
+
+from evaluate import load
+import numpy as np
+
+def evaluator(inputs, outputs, reference_outputs):
+    # Your evaluation logic here
+    pass
+```
+
+**How it works:**
+- Dependencies are installed automatically in an isolated environment on first run (~30-60 seconds)
+- Subsequent runs are fast (~2-5 seconds) because packages are cached
+- This ensures your evaluator always has the exact dependencies it needs without conflicts
 
 ### Function Signature
 
@@ -237,6 +254,14 @@ def evaluator(inputs: list, outputs: dict, reference_outputs: dict):
 Implement sophisticated comparison algorithms:
 
 ```python
+# /// script
+# requires-python = ">=3.8"
+# dependencies = [
+#   "scikit-learn>=1.0.0",
+#   "numpy>=1.21.0"
+# ]
+# ///
+
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
@@ -244,14 +269,14 @@ import numpy as np
 def evaluator(inputs: list, outputs: dict, reference_outputs: dict):
     output_text = outputs.get('content', '')
     reference_text = reference_outputs.get('content', '')
-    
+
     if not output_text or not reference_text:
         return 0.0
-    
+
     # Create TF-IDF vectors
     vectorizer = TfidfVectorizer()
     texts = [output_text, reference_text]
-    
+
     try:
         tfidf_matrix = vectorizer.fit_transform(texts)
         similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
