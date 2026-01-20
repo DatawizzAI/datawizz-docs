@@ -1,0 +1,68 @@
+---
+title: 'Using Datawizz with LangSmith'
+description: 'Export LangSmith traces and import them into Datawizz'
+---
+
+LangSmith is LangChain's platform for debugging, testing, and monitoring LLM applications. If you have existing traces in LangSmith, you can export them and import them into Datawizz for training custom SLMs and evaluation.
+
+## Exporting Traces from LangSmith
+
+We provide a Python script that exports LangSmith traces to a CSV file compatible with Datawizz. The script extracts comprehensive metadata from your LLM calls including messages, tokens, costs, and latency information.
+
+### Prerequisites
+
+You'll need a LangSmith API key. You can get one from: [https://smith.langchain.com/settings](https://smith.langchain.com/settings)
+
+Set your API key as an environment variable:
+
+```bash
+export LANGSMITH_API_KEY=your_api_key_here
+```
+
+Optionally, if you're using a custom LangSmith endpoint:
+
+```bash
+export LANGSMITH_ENDPOINT=https://your-custom-endpoint.com
+```
+
+### Running the Export Script
+
+You can run the script using Python directly or with `uv`:
+
+```bash
+# With Python
+python export_traces_to_csv.py
+
+# Or with uv (no manual dependency installation required)
+uv run --with langsmith export_traces_to_csv.py
+```
+
+The script is available as a [GitHub Gist](https://gist.github.com/iddogino/ccddf21638e607a1b5b00ec557489999).
+
+
+### Output Format
+
+The script creates a `langsmith_traces.csv` file with 21 columns per LLM call:
+
+| Category | Columns |
+|----------|---------|
+| **Core** | `trace_id`, `run_id`, `parent_run_id`, `input_messages`, `output_message` |
+| **Model** | `model`, `provider`, `temperature`, `finish_reason` |
+| **Status** | `status`, `error` |
+| **Tokens** | `total_tokens`, `prompt_tokens`, `completion_tokens` |
+| **Cost** | `total_cost`, `prompt_cost`, `completion_cost` |
+| **Performance** | `latency_ms`, `start_time`, `end_time` |
+| **Metadata** | `tags` |
+
+The `input_messages` column uses OpenAI message format, making it directly compatible with Datawizz dataset imports.
+
+## Importing into Datawizz
+
+Once you have your exported CSV file:
+
+1. Navigate to the **Datasets** tab in the Datawizz dashboard
+2. Create a new dataset or open an existing one
+3. Click **Import CSV** and select your `langsmith_traces.csv` file
+4. Map the `input_messages` column to `input` and `output_message` to `output`
+
+Read more about uploading CSVs and using them for training: [Using Datasets](/models/datasets)
