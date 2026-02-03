@@ -132,6 +132,25 @@
         ]
       },
       {
+        "tab": "Self Host",
+        "groups": [
+          {
+            "group": "Self Host",
+            "pages": [
+              "self-host/get-started"
+            ]
+          },
+          {
+            "group": "Scaling",
+            "pages": [
+              "self-host/scaling-clickhouse",
+              "self-host/scaling-gateway",
+              "self-host/scaling-inference"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "Public Plugins",
         "groups": [
           {
