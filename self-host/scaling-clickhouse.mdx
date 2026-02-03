@@ -1,0 +1,120 @@
+---
+title: 'Scaling Out ClickHouse'
+description: 'Run ClickHouse on a separate instance for data redundancy and performance'
+---
+
+Datawizz uses ClickHouse to store inference logs, feedback signals, and other data items. By default, the Docker Compose setup runs ClickHouse locally via the `clickhouse` profile. For production deployments, we recommend moving ClickHouse to a dedicated instance or managed service for better data redundancy and independent scaling.
+
+## Option 1: Standalone ClickHouse via Docker
+
+Run ClickHouse on a separate machine using Docker:
+
+```bash
+docker run -d \
+    --name clickhouse-server \
+    --ulimit nofile=262144:262144 \
+    -v clickhouse_data:/var/lib/clickhouse/ \
+    -v clickhouse_logs:/var/log/clickhouse-server/ \
+    -p 8123:8123 \
+    -p 9000:9000 \
+    -e CLICKHOUSE_DB=datawizz \
+    -e CLICKHOUSE_USER=your_user \
+    -e CLICKHOUSE_PASSWORD=your_secure_password \
+    -e CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1 \
+    clickhouse/clickhouse-server
+```
+
+This exposes:
+- **Port 8123** — HTTP interface (used by the Datawizz app and logging services)
+- **Port 9000** — Native TCP interface (used by the PostgreSQL FDW and migrations)
+
+<Warning>
+  In production, restrict network access to these ports. Only the Datawizz instance and any services that need to query ClickHouse should be able to reach them.
+</Warning>
+
+## Option 2: Managed ClickHouse Service
+
+You can use a managed ClickHouse provider such as [ClickHouse Cloud](https://clickhouse.com/cloud) or any other hosted ClickHouse offering. Ensure the service exposes both HTTP and native TCP interfaces, and note the connection credentials for the next step.
+
+## Updating the Main Instance
+
+Once your external ClickHouse is running, update the `.env` file on your main Datawizz instance:
+
+### 1. Set the ClickHouse connection variables
+
+```bash
+# Point to the external ClickHouse instance
+CLICKHOUSE_HOST=your-clickhouse-host.example.com
+CLICKHOUSE_PORT=8123
+CLICKHOUSE_NATIVE_PORT=9000
+CLICKHOUSE_USER=your_user
+CLICKHOUSE_PASSWORD=your_secure_password
+CLICKHOUSE_DATABASE=datawizz
+```
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `CLICKHOUSE_HOST` | Hostname or IP of the external ClickHouse server | `clickhouse` (local container) |
+| `CLICKHOUSE_PORT` | HTTP port | `8123` |
+| `CLICKHOUSE_NATIVE_PORT` | Native TCP port (used by FDW and migrations) | `9000` |
+| `CLICKHOUSE_USER` | ClickHouse username | `default` |
+| `CLICKHOUSE_PASSWORD` | ClickHouse password | `default` |
+| `CLICKHOUSE_DATABASE` | Database name | `default` |
+
+### 2. Disable the local ClickHouse profile
+
+Do **not** use the `clickhouse` or `full` profile when starting services. Instead, start with only the profiles you need:
+
+```bash
+# Without local ClickHouse (uses external)
+docker compose up -d
+
+# With gateway (gateway will also use the external ClickHouse)
+docker compose --profile gateway up -d
+```
+
+<Note>
+  If you previously ran with the `clickhouse` profile, the local container may still exist. You can remove it with `docker compose --profile clickhouse down`.
+</Note>
+
+### 3. Run database migrations
+
+The ClickHouse migrations need to run against your external instance. You can trigger them manually:
+
+```bash
+docker compose up -d --force-recreate clickhouse-migrations
+```
+
+This uses the same `CLICKHOUSE_HOST`, `CLICKHOUSE_USER`, `CLICKHOUSE_PASSWORD`, and `CLICKHOUSE_DATABASE` env vars from your `.env` file. Check the logs to confirm success:
+
+```bash
+docker compose logs clickhouse-migrations
+```
+
+### 4. Restart services
+
+Restart the Datawizz app and any gateway services so they pick up the new ClickHouse connection:
+
+```bash
+docker compose restart datawizz-app
+
+# If using the gateway profile
+docker compose --profile gateway restart request-logger
+```
+
+## Verifying the Connection
+
+You can verify the connection by checking the health of the Datawizz app and confirming data flows into the external ClickHouse:
+
+```bash
+# Check app health
+docker compose ps datawizz-app
+
+# Connect to the external ClickHouse and verify tables exist
+docker run --rm clickhouse/clickhouse-client \
+    --host your-clickhouse-host.example.com \
+    --port 9000 \
+    --user your_user \
+    --password your_secure_password \
+    --query "SHOW TABLES FROM datawizz"
+```
