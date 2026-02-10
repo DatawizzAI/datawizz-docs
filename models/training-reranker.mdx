@@ -1,0 +1,206 @@
+---
+title: 'Reranker Models'
+description: 'API request/response for reranker inference and data format for reranker training'
+---
+
+Reranker models score query–document pairs for relevance. Datawizz supports **inference** via the same chat-completion-style API (with automatic transformation to the backend rerank endpoint) and **training** via the Swift worker with a specific data format.
+
+## Inference API
+
+When you call a deployed reranker model through Datawizz (e.g. Datawizz Serverless or your endpoint), you use the **chat completions** request format. The gateway transforms it to the backend `/v1/rerank` format and converts the rerank response back to a chat completion so logging and evaluation work as with other models.
+
+### Request (chat completion format)
+
+Send a standard chat completion request with:
+
+- **`model`**: Your deployed reranker model name.
+- **`messages`**:
+  - **One `system` message**: its `content` is the **query** (string).
+  - **One `user` message**: the **documents** to score. Either:
+    - A **string** (single document), or
+    - An **array** of content parts: `{"type": "text", "text": "Document content"}` for each document.
+
+<CodeGroup>
+
+```json Request (single document)
+{
+  "model": "your-reranker-model",
+  "messages": [
+    { "role": "system", "content": "What is Python async programming?" },
+    { "role": "user", "content": "asyncio is Python's asynchronous I/O framework, supporting coroutines and event loops." }
+  ]
+}
+```
+
+```json Request (multiple documents)
+{
+  "model": "your-reranker-model",
+  "messages": [
+    { "role": "system", "content": "What is Python async programming?" },
+    {
+      "role": "user",
+      "content": [
+        { "type": "text", "text": "asyncio is Python's asynchronous I/O framework." },
+        { "type": "text", "text": "Java is an object-oriented programming language." },
+        { "type": "text", "text": "Python asyncio provides event loops and coroutines for concurrent I/O." }
+      ]
+    }
+  ]
+}
+```
+
+</CodeGroup>
+
+Requirements:
+
+- Exactly one `system` message with non-empty string `content` (the query).
+- Exactly one `user` message whose `content` is either a non-empty string or an array of `{ "type": "text", "text": "..." }` with at least one document.
+
+### Response (chat completion format)
+
+The response is returned as a normal chat completion. The assistant **message content** is a **JSON string** of the rerank results (index and score only; document text is not echoed):
+
+```json
+{
+  "id": "...",
+  "object": "chat.completion",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "[{\"index\":0,\"relevance_score\":0.95},{\"index\":1,\"relevance_score\":0.12},{\"index\":2,\"relevance_score\":0.88}]"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 150,
+    "completion_tokens": 1,
+    "total_tokens": 151
+  }
+}
+```
+
+- **`choices[0].message.content`**: JSON string of an array of `{ "index": number, "relevance_score": number }`, ordered by the backend (typically by relevance, highest first).
+- **`index`**: Original document index (0-based) in the request.
+- **`relevance_score`**: Relevance score in [0, 1] (higher = more relevant).
+- **`usage`**: Token counts; reranker responses use `completion_tokens: 1` for evaluation/cost tracking.
+
+Parse the string to get the array:
+
+```javascript
+const content = response.choices[0].message.content;
+const results = JSON.parse(content);
+// results = [{ index: 0, relevance_score: 0.95 }, { index: 1, relevance_score: 0.12 }, ...]
+```
+
+---
+
+## Training Data Format
+
+Reranker training in Datawizz uses the **Swift** worker. You provide data in the **Datawizz format** (one sample per row in your dataset or in a JSON/JSONL file). Each sample has `input` (query + document) and `output` (relevance label).
+
+### Per-sample structure
+
+Each training example must have:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `input` | array | Exactly two messages: **system** = query, **user** = document. |
+| `output` | object | Single message with **role** `"assistant"` and **content** = relevance label (see below). |
+| `id` | string | Optional; preserved for tracking. |
+
+**Query and document:**
+
+- **`input[0]`**: `{ "role": "system", "content": "<query text>" }` — the search query or instruction.
+- **`input[1]`**: `{ "role": "user", "content": "<document text>" }` — the document to be judged.
+
+**Relevance label (`output.content`):**
+
+- **Pointwise (default, `loss_type: "pointwise_reranker"`)**: Binary 0/1.
+  - **Text**: `"Yes"`, `"True"`, `"1"`, `"relevant"` → 1; anything else (e.g. `"No"`, `"False"`, `"0"`) → 0.
+  - **Numeric**: Value in [0, 1]; ≥ 0.5 → 1, &lt; 0.5 → 0.
+- **MSE (`loss_type: "mse"`)**: Continuous score in [0, 1].
+  - **Text**: `"Yes"` / `"True"` / `"1"` / `"relevant"` → 1.0; `"No"` / `"False"` / `"0"` → 0.0; otherwise 0.5.
+  - **Numeric**: Clamped to [0, 1] and used as the target.
+
+### Sample training file (Datawizz format)
+
+Below is a minimal JSON array you can use as a reference or import (e.g. as dataset items). Same structure applies per line for JSONL.
+
+```json
+[
+  {
+    "id": "sample-001",
+    "input": [
+      { "role": "system", "content": "Query: Python async programming" },
+      { "role": "user", "content": "asyncio is Python's asynchronous I/O framework, supporting coroutines and event loops. It is used for concurrent I/O-bound tasks." }
+    ],
+    "output": { "role": "assistant", "content": "Yes" }
+  },
+  {
+    "id": "sample-002",
+    "input": [
+      { "role": "system", "content": "Query: Python async programming" },
+      { "role": "user", "content": "Java is an object-oriented programming language with a focus on portability and the JVM." }
+    ],
+    "output": { "role": "assistant", "content": "No" }
+  },
+  {
+    "id": "sample-003",
+    "input": [
+      { "role": "system", "content": "How to read a CSV file in Python?" },
+      { "role": "user", "content": "Use the pandas library: import pandas as pd; df = pd.read_csv('file.csv'). You can then use df.head() to preview rows." }
+    ],
+    "output": { "role": "assistant", "content": "Yes" }
+  },
+  {
+    "id": "sample-004",
+    "input": [
+      { "role": "system", "content": "How to read a CSV file in Python?" },
+      { "role": "user", "content": "Today's weather is sunny. Remember to bring an umbrella in case of rain." }
+    ],
+    "output": { "role": "assistant", "content": "No" }
+  },
+  {
+    "id": "sample-005",
+    "input": [
+      { "role": "system", "content": "What is machine learning?" },
+      { "role": "user", "content": "Machine learning is a subset of AI that enables systems to learn from data. Common types include supervised, unsupervised, and reinforcement learning." }
+    ],
+    "output": { "role": "assistant", "content": 0.9 }
+  }
+]
+```
+
+For **MSE** training, use continuous scores in `output.content`, e.g. `0.9`, `0.2`, or strings that map to 0.0/0.5/1.0 as above.
+
+### JSONL variant (one object per line)
+
+Same structure, one JSON object per line (no top-level array, newline-delimited):
+
+```jsonl
+{"id":"sample-001","input":[{"role":"system","content":"Query: Python async programming"},{"role":"user","content":"asyncio is Python's asynchronous I/O framework, supporting coroutines and event loops."}],"output":{"role":"assistant","content":"Yes"}}
+{"id":"sample-002","input":[{"role":"system","content":"Query: Python async programming"},{"role":"user","content":"Java is an object-oriented programming language."}],"output":{"role":"assistant","content":"No"}}
+```
+
+### Training configuration (Swift reranker)
+
+When creating a reranker model in the app, you choose:
+
+- **Loss type**: `pointwise_reranker` (binary 0/1) or `mse` (regression in [0, 1]).
+- **Base models**: e.g. Qwen3-Reranker-0.6B/4B, bge-reranker-v2-m3, gte-reranker-modernbert-base.
+
+Other Swift parameters (epochs, batch size, max sequence length, LoRA, etc.) are documented in [Training Parameters](/models/training-parameters). Rerankers typically use a larger **max sequence length** (e.g. 8192) to include full documents.
+
+---
+
+## Summary
+
+| Use case | Request / data | Response / label |
+|----------|-----------------|------------------|
+| **Inference** | Chat completion: `messages` = system (query) + user (documents as string or `[{type:"text", text:"..."}]`) | `choices[0].message.content` = JSON string of `[{index, relevance_score}, ...]` |
+| **Training** | Datawizz format: `input` = [system=query, user=document], `output` = assistant content = "Yes"/"No" or 0/1 or float [0,1] | N/A (labels define relevance for training) |
+
+Ensure inference requests use one system (query) and one user (documents) message; ensure training data uses exactly two `input` messages (system then user) and one `output` with the appropriate label type for your chosen `loss_type`.
