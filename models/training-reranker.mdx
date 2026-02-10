@@ -22,6 +22,8 @@ Send a standard chat completion request with:
 
 <Info>
 **Recommendation (Qwen3-Reranker):** For best performance with Qwen3-Reranker models, use the native `<Instruct>`, `<Query>`, and `<Document>` tag format in your messages. The simplified format (plain query in system, plain document in user) also works, but the tagged format aligns with how the model was trained and may yield better relevance scores.
+
+The default Instruct for Qwen3-Reranker is: `"Given a web search query, retrieve relevant passages that answer the query"`. You can customize this for your specific task.
 </Info>
 
 <CodeGroup>
@@ -67,8 +69,8 @@ Send a standard chat completion request with:
 
 Requirements:
 
-- Exactly one `system` message with non-empty string `content` (the query).
-- Exactly one `user` message whose `content` is either a non-empty string or an array of `{ "type": "text", "text": "..." }` with at least one document.
+- Exactly one `system` message with non-empty string `content` (the query, or `<Instruct>` + `<Query>` tags for Qwen3 format).
+- Exactly one `user` message whose `content` is either a non-empty string or an array of `{ "type": "text", "text": "..." }` with at least one document (or `<Document>` tags for Qwen3 format).
 
 ### Response (chat completion format)
 
@@ -109,6 +111,81 @@ const results = JSON.parse(content);
 // results = [{ index: 0, relevance_score: 0.95 }, { index: 1, relevance_score: 0.12 }, ...]
 ```
 
+### Feedback / Improvement Signal
+
+To send feedback on reranker results, use the feedback endpoint:
+
+```
+POST /{project_uid}/{endpoint_uid}/feedback/{inference_log_id}
+```
+
+The response headers `X-Feedback-Url` and `X-Feedback-Token` provide the URL and JWT token for submitting feedback. See [Feedback Signals](/logs/feedback) for full details.
+
+For rerankers, provide an **improvement** object with the corrected relevance scores in the same structure as the model's output:
+
+**Single result:**
+
+```json
+{
+  "role": "assistant",
+  "content": { "index": 0, "relevance_score": 0.95 }
+}
+```
+
+Replace `0.95` with your ideal relevance score (0–1).
+
+**Batch results (multiple documents):**
+
+```json
+{
+  "role": "assistant",
+  "content": [
+    { "index": 0, "relevance_score": 0.95 },
+    { "index": 1, "relevance_score": 0.1 },
+    { "index": 2, "relevance_score": 0.8 }
+  ]
+}
+```
+
+Replace each `relevance_score` with your corrected score for that document.
+
+**Pointwise (binary) feedback:** Use `1` for relevant ("Yes") and `0` for not relevant ("No"):
+
+```json
+{
+  "role": "assistant",
+  "content": [
+    { "index": 0, "relevance_score": 1 },
+    { "index": 1, "relevance_score": 0 }
+  ]
+}
+```
+
+The `index` corresponds to the original document index in the request. This feedback can be used for supervised fine-tuning or to track model performance over time.
+
+**Example API call:**
+
+```bash
+curl -X POST "https://gw.datawizz.app/{project_uid}/{endpoint_uid}/feedback/{inference_log_id}" \
+  -H "Authorization: Bearer ${FEEDBACK_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "score": 0,
+    "weight": 1.0,
+    "improvement": {
+      "role": "assistant",
+      "content": [
+        { "index": 0, "relevance_score": 1 },
+        { "index": 1, "relevance_score": 0 }
+      ]
+    }
+  }'
+```
+
+<Note>
+`score` and `weight` are **required** fields. For reranker feedback where you're mainly providing corrected scores in `improvement`, use `score: 0` (neutral) and `weight: 1.0`. See [Feedback Signals API](/api-reference/endpoint/post_feedback) for full schema details.
+</Note>
+
 ---
 
 ## Training Data Format
@@ -121,17 +198,19 @@ Each training example must have:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `input` | array | Exactly two messages: **system** = query, **user** = document. |
+| `input` | array | Exactly two messages: **system** = query (or `<Instruct>`+`<Query>` tags), **user** = document (or `<Document>` tag). |
 | `output` | object | Single message with **role** `"assistant"` and **content** = relevance label (see below). |
 | `id` | string | Optional; preserved for tracking. |
 
 **Query and document:**
 
-- **`input[0]`**: `{ "role": "system", "content": "<query text>" }` — the search query or instruction.
-- **`input[1]`**: `{ "role": "user", "content": "<document text>" }` — the document to be judged.
+- **`input[0]`**: `{ "role": "system", "content": "..." }` — the search query, or `<Instruct>` + `<Query>` tags for Qwen3 format.
+- **`input[1]`**: `{ "role": "user", "content": "..." }` — the document to be judged, or `<Document>` tag for Qwen3 format.
 
 <Info>
 **Recommendation (Qwen3-Reranker):** Use the same `<Instruct>/<Query>/<Document>` tag format in training data as at inference. This aligns training with how you call the model and may improve fine-tuning results. The simplified format (plain query in system, plain document in user) also works.
+
+Use the default Instruct `"Given a web search query, retrieve relevant passages that answer the query"` or customize it for your specific task.
 </Info>
 
 **Relevance label (`output.content`):**
@@ -179,7 +258,8 @@ Other Swift parameters (epochs, batch size, max sequence length, LoRA, etc.) are
 
 | Use case | Request / data | Response / label |
 |----------|-----------------|------------------|
-| **Inference** | Chat completion: `messages` = system (query) + user (documents as string or `[{type:"text", text:"..."}]`) | `choices[0].message.content` = JSON string of `[{index, relevance_score}, ...]` |
-| **Training** | Datawizz format: `input` = [system=query, user=document], `output` = assistant content = "Yes"/"No" or 0/1 or float [0,1] | N/A (labels define relevance for training) |
+| **Inference** | Chat completion: `messages` = system (query or `<Instruct>`/`<Query>` tags) + user (documents or `<Document>` tags) | `choices[0].message.content` = JSON string of `[{index, relevance_score}, ...]` |
+| **Feedback** | POST `/{project_uid}/{endpoint_uid}/feedback/{inference_log_id}` with `improvement` containing corrected scores | — |
+| **Training** | Datawizz format: `input` = [system=query/tags, user=document/tags], `output` = assistant content = "Yes"/"No" or 0/1 or float [0,1] | N/A (labels define relevance for training) |
 
-Ensure inference requests use one system (query) and one user (documents) message; ensure training data uses exactly two `input` messages (system then user) and one `output` with the appropriate label type for your chosen `loss_type`.
+Ensure inference requests use one system and one user message; ensure training data uses exactly two `input` messages (system then user) and one `output` with the appropriate label type for your chosen `loss_type`.
