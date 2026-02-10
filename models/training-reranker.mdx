@@ -176,15 +176,21 @@ curl -X POST "https://gw.datawizz.app/{project_uid}/{endpoint_uid}/feedback/{inf
       "role": "assistant",
       "content": [
         { "index": 0, "relevance_score": 1 },
-        { "index": 1, "relevance_score": 0 }
+        { "index": 5, "relevance_score": 0 },
+        { "index": 99, "relevance_score": 1 }
       ]
     }
   }'
 ```
 
 <Note>
-`score` and `weight` are **required** fields. For reranker feedback where you're mainly providing corrected scores in `improvement`, use `score: 0` (neutral) and `weight: 1.0`. See [Feedback Signals API](/api-reference/endpoint/post_feedback) for full schema details.
+`score` and `weight` are **required** fields but not meaningful for reranker feedback—just use the defaults (`score: 0`, `weight: 1.0`). The important part is the `improvement` object with your corrected relevance scores. See [Feedback Signals API](/api-reference/endpoint/post_feedback) for full schema details.
 </Note>
+
+<Tip>
+- **Partial feedback is fine:** You don't need to provide feedback for every document—just the ones you want to correct.
+- **Incremental or batch:** You can send all corrections in one request, or send multiple requests over time. We handle aggregation automatically.
+</Tip>
 
 ---
 
