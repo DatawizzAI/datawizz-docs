@@ -85,7 +85,7 @@ The response is returned as a normal chat completion. The assistant **message co
 - **`choices[0].message.content`**: JSON string of an array of `{ "index": number, "relevance_score": number }`, ordered by the backend (typically by relevance, highest first).
 - **`index`**: Original document index (0-based) in the request.
 - **`relevance_score`**: Relevance score in [0, 1] (higher = more relevant).
-- **`usage`**: Token counts; reranker responses use `completion_tokens: 1` for evaluation/cost tracking.
+- **`usage`**: Token counts.
 
 Parse the string to get the array:
 
