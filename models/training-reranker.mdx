@@ -20,31 +20,45 @@ Send a standard chat completion request with:
     - A **string** (single document), or
     - An **array** of content parts: `{"type": "text", "text": "Document content"}` for each document.
 
+<Info>
+**Recommendation (Qwen3-Reranker):** For best performance with Qwen3-Reranker models, use the native `<Instruct>`, `<Query>`, and `<Document>` tag format in your messages. The simplified format (plain query in system, plain document in user) also works, but the tagged format aligns with how the model was trained and may yield better relevance scores.
+</Info>
+
 <CodeGroup>
 
-```json Request (single document)
+```json Qwen3 format (recommended)
+{
+  "model": "your-reranker-model",
+  "messages": [
+    { "role": "system", "content": "<Instruct>: Given a web search query, retrieve relevant passages that answer the query\n<Query>: What is Python async programming?" },
+    { "role": "user", "content": "<Document>: asyncio is Python's asynchronous I/O framework, supporting coroutines and event loops." }
+  ]
+}
+```
+
+```json Qwen3 format (multiple documents)
+{
+  "model": "your-reranker-model",
+  "messages": [
+    { "role": "system", "content": "<Instruct>: Given a web search query, retrieve relevant passages that answer the query\n<Query>: What is Python async programming?" },
+    {
+      "role": "user",
+      "content": [
+        { "type": "text", "text": "<Document>: asyncio is Python's asynchronous I/O framework." },
+        { "type": "text", "text": "<Document>: Java is an object-oriented programming language." },
+        { "type": "text", "text": "<Document>: Python asyncio provides event loops and coroutines for concurrent I/O." }
+      ]
+    }
+  ]
+}
+```
+
+```json Simplified format (also works)
 {
   "model": "your-reranker-model",
   "messages": [
     { "role": "system", "content": "What is Python async programming?" },
     { "role": "user", "content": "asyncio is Python's asynchronous I/O framework, supporting coroutines and event loops." }
-  ]
-}
-```
-
-```json Request (multiple documents)
-{
-  "model": "your-reranker-model",
-  "messages": [
-    { "role": "system", "content": "What is Python async programming?" },
-    {
-      "role": "user",
-      "content": [
-        { "type": "text", "text": "asyncio is Python's asynchronous I/O framework." },
-        { "type": "text", "text": "Java is an object-oriented programming language." },
-        { "type": "text", "text": "Python asyncio provides event loops and coroutines for concurrent I/O." }
-      ]
-    }
   ]
 }
 ```
@@ -116,6 +130,10 @@ Each training example must have:
 - **`input[0]`**: `{ "role": "system", "content": "<query text>" }` — the search query or instruction.
 - **`input[1]`**: `{ "role": "user", "content": "<document text>" }` — the document to be judged.
 
+<Info>
+**Recommendation (Qwen3-Reranker):** Use the same `<Instruct>/<Query>/<Document>` tag format in training data as at inference. This aligns training with how you call the model and may improve fine-tuning results. The simplified format (plain query in system, plain document in user) also works.
+</Info>
+
 **Relevance label (`output.content`):**
 
 - **Pointwise (default, `loss_type: "pointwise_reranker"`)**: Binary 0/1.
@@ -127,63 +145,24 @@ Each training example must have:
 
 ### Sample training file (Datawizz format)
 
-Below is a minimal JSON array you can use as a reference or import (e.g. as dataset items). Same structure applies per line for JSONL.
+Datawizz supports importing reranker training data **only in JSONL format** (one JSON object per line). A JSON array is not supported for import. Each line must be a single object with the structure below.
 
-```json
-[
-  {
-    "id": "sample-001",
-    "input": [
-      { "role": "system", "content": "Query: Python async programming" },
-      { "role": "user", "content": "asyncio is Python's asynchronous I/O framework, supporting coroutines and event loops. It is used for concurrent I/O-bound tasks." }
-    ],
-    "output": { "role": "assistant", "content": "Yes" }
-  },
-  {
-    "id": "sample-002",
-    "input": [
-      { "role": "system", "content": "Query: Python async programming" },
-      { "role": "user", "content": "Java is an object-oriented programming language with a focus on portability and the JVM." }
-    ],
-    "output": { "role": "assistant", "content": "No" }
-  },
-  {
-    "id": "sample-003",
-    "input": [
-      { "role": "system", "content": "How to read a CSV file in Python?" },
-      { "role": "user", "content": "Use the pandas library: import pandas as pd; df = pd.read_csv('file.csv'). You can then use df.head() to preview rows." }
-    ],
-    "output": { "role": "assistant", "content": "Yes" }
-  },
-  {
-    "id": "sample-004",
-    "input": [
-      { "role": "system", "content": "How to read a CSV file in Python?" },
-      { "role": "user", "content": "Today's weather is sunny. Remember to bring an umbrella in case of rain." }
-    ],
-    "output": { "role": "assistant", "content": "No" }
-  },
-  {
-    "id": "sample-005",
-    "input": [
-      { "role": "system", "content": "What is machine learning?" },
-      { "role": "user", "content": "Machine learning is a subset of AI that enables systems to learn from data. Common types include supervised, unsupervised, and reinforcement learning." }
-    ],
-    "output": { "role": "assistant", "content": 0.9 }
-  }
-]
+**Example JSONL — Qwen3 format (recommended):**
+
+```jsonl
+{"id":"sample-001","input":[{"role":"system","content":"<Instruct>: Given a web search query, retrieve relevant passages that answer the query\n<Query>: What is Python async programming?"},{"role":"user","content":"<Document>: asyncio is Python's asynchronous I/O framework, supporting coroutines and event loops."}],"output":{"role":"assistant","content":"Yes"}}
+{"id":"sample-002","input":[{"role":"system","content":"<Instruct>: Given a web search query, retrieve relevant passages that answer the query\n<Query>: What is Python async programming?"},{"role":"user","content":"<Document>: Java is an object-oriented programming language."}],"output":{"role":"assistant","content":"No"}}
+{"id":"sample-003","input":[{"role":"system","content":"<Instruct>: Given a web search query, retrieve relevant passages that answer the query\n<Query>: What is machine learning?"},{"role":"user","content":"<Document>: Machine learning is a subset of AI that enables systems to learn from data."}],"output":{"role":"assistant","content":0.9}}
+```
+
+**Example JSONL — Simplified format (also works):**
+
+```jsonl
+{"id":"sample-001","input":[{"role":"system","content":"What is Python async programming?"},{"role":"user","content":"asyncio is Python's asynchronous I/O framework, supporting coroutines and event loops."}],"output":{"role":"assistant","content":"Yes"}}
+{"id":"sample-002","input":[{"role":"system","content":"What is Python async programming?"},{"role":"user","content":"Java is an object-oriented programming language."}],"output":{"role":"assistant","content":"No"}}
 ```
 
 For **MSE** training, use continuous scores in `output.content`, e.g. `0.9`, `0.2`, or strings that map to 0.0/0.5/1.0 as above.
-
-### JSONL variant (one object per line)
-
-Same structure, one JSON object per line (no top-level array, newline-delimited):
-
-```jsonl
-{"id":"sample-001","input":[{"role":"system","content":"Query: Python async programming"},{"role":"user","content":"asyncio is Python's asynchronous I/O framework, supporting coroutines and event loops."}],"output":{"role":"assistant","content":"Yes"}}
-{"id":"sample-002","input":[{"role":"system","content":"Query: Python async programming"},{"role":"user","content":"Java is an object-oriented programming language."}],"output":{"role":"assistant","content":"No"}}
-```
 
 ### Training configuration (Swift reranker)
 
