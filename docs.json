@@ -85,7 +85,7 @@
                   "models/training-models",
                   "models/training-parameters",
                   "models/datasets",
-                  "models/reranker",
+                  "models/training-reranker",
                   "models/model-deployment"
                 ]
               },
