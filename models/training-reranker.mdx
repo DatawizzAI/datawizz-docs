@@ -1,0 +1,271 @@
+---
+title: 'Reranker Models'
+description: 'API request/response for reranker inference and data format for reranker training'
+---
+
+Reranker models score query–document pairs for relevance. Datawizz supports **inference** via the same chat-completion-style API (with automatic transformation to the backend rerank endpoint) and **training** via the Swift worker with a specific data format.
+
+## Inference API
+
+When you call a deployed reranker model through Datawizz (e.g. Datawizz Serverless or your endpoint), you use the **chat completions** request format. The gateway transforms it to the backend `/v1/rerank` format and converts the rerank response back to a chat completion so logging and evaluation work as with other models.
+
+### Request (chat completion format)
+
+Send a standard chat completion request with:
+
+- **`model`**: Your deployed reranker model name.
+- **`messages`**:
+  - **One `system` message**: its `content` is the **query** (string).
+  - **One `user` message**: the **documents** to score. Either:
+    - A **string** (single document), or
+    - An **array** of content parts: `{"type": "text", "text": "Document content"}` for each document.
+
+<Info>
+**Recommendation (Qwen3-Reranker):** For best performance with Qwen3-Reranker models, use the native `<Instruct>`, `<Query>`, and `<Document>` tag format in your messages. The simplified format (plain query in system, plain document in user) also works, but the tagged format aligns with how the model was trained and may yield better relevance scores.
+
+The default Instruct for Qwen3-Reranker is: `"Given a web search query, retrieve relevant passages that answer the query"`. You can customize this for your specific task.
+</Info>
+
+<CodeGroup>
+
+```json Qwen3 format (recommended)
+{
+  "model": "your-reranker-model",
+  "messages": [
+    { "role": "system", "content": "<Instruct>: Given a web search query, retrieve relevant passages that answer the query\n<Query>: What is Python async programming?" },
+    { "role": "user", "content": "<Document>: asyncio is Python's asynchronous I/O framework, supporting coroutines and event loops." }
+  ]
+}
+```
+
+```json Qwen3 format (multiple documents)
+{
+  "model": "your-reranker-model",
+  "messages": [
+    { "role": "system", "content": "<Instruct>: Given a web search query, retrieve relevant passages that answer the query\n<Query>: What is Python async programming?" },
+    {
+      "role": "user",
+      "content": [
+        { "type": "text", "text": "<Document>: asyncio is Python's asynchronous I/O framework." },
+        { "type": "text", "text": "<Document>: Java is an object-oriented programming language." },
+        { "type": "text", "text": "<Document>: Python asyncio provides event loops and coroutines for concurrent I/O." }
+      ]
+    }
+  ]
+}
+```
+
+```json Simplified format (also works)
+{
+  "model": "your-reranker-model",
+  "messages": [
+    { "role": "system", "content": "What is Python async programming?" },
+    { "role": "user", "content": "asyncio is Python's asynchronous I/O framework, supporting coroutines and event loops." }
+  ]
+}
+```
+
+</CodeGroup>
+
+Requirements:
+
+- Exactly one `system` message with non-empty string `content` (the query, or `<Instruct>` + `<Query>` tags for Qwen3 format).
+- Exactly one `user` message whose `content` is either a non-empty string or an array of `{ "type": "text", "text": "..." }` with at least one document (or `<Document>` tags for Qwen3 format).
+
+### Response (chat completion format)
+
+The response is returned as a normal chat completion. The assistant **message content** is a **JSON string** of the rerank results (index and score only; document text is not echoed):
+
+```json
+{
+  "id": "...",
+  "object": "chat.completion",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "[{\"index\":0,\"relevance_score\":0.95},{\"index\":1,\"relevance_score\":0.12},{\"index\":2,\"relevance_score\":0.88}]"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 150,
+    "completion_tokens": 1,
+    "total_tokens": 151
+  }
+}
+```
+
+- **`choices[0].message.content`**: JSON string of an array of `{ "index": number, "relevance_score": number }`, ordered by the backend (typically by relevance, highest first).
+- **`index`**: Original document index (0-based) in the request.
+- **`relevance_score`**: Relevance score in [0, 1] (higher = more relevant).
+- **`usage`**: Token counts.
+
+Parse the string to get the array:
+
+```javascript
+const content = response.choices[0].message.content;
+const results = JSON.parse(content);
+// results = [{ index: 0, relevance_score: 0.95 }, { index: 1, relevance_score: 0.12 }, ...]
+```
+
+### Feedback / Improvement Signal
+
+To send feedback on reranker results, use the feedback endpoint:
+
+```
+POST /{project_uid}/{endpoint_uid}/feedback/{inference_log_id}
+```
+
+The response headers `X-Feedback-Url` and `X-Feedback-Token` provide the URL and JWT token for submitting feedback. See [Feedback Signals](/logs/feedback) for full details.
+
+For rerankers, provide an **improvement** object with the corrected relevance scores in the same structure as the model's output:
+
+**Single result:**
+
+```json
+{
+  "role": "assistant",
+  "content": { "index": 0, "relevance_score": 0.95 }
+}
+```
+
+Replace `0.95` with your ideal relevance score (0–1).
+
+**Batch results (multiple documents):**
+
+```json
+{
+  "role": "assistant",
+  "content": [
+    { "index": 0, "relevance_score": 0.95 },
+    { "index": 1, "relevance_score": 0.1 },
+    { "index": 2, "relevance_score": 0.8 }
+  ]
+}
+```
+
+Replace each `relevance_score` with your corrected score for that document.
+
+**Pointwise (binary) feedback:** Use `1` for relevant ("Yes") and `0` for not relevant ("No"):
+
+```json
+{
+  "role": "assistant",
+  "content": [
+    { "index": 0, "relevance_score": 1 },
+    { "index": 1, "relevance_score": 0 }
+  ]
+}
+```
+
+The `index` corresponds to the original document index in the request. This feedback can be used for supervised fine-tuning or to track model performance over time.
+
+**Example API call:**
+
+```bash
+curl -X POST "https://gw.datawizz.app/{project_uid}/{endpoint_uid}/feedback/{inference_log_id}" \
+  -H "Authorization: Bearer ${FEEDBACK_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "score": 0,
+    "weight": 1.0,
+    "improvement": {
+      "role": "assistant",
+      "content": [
+        { "index": 0, "relevance_score": 1 },
+        { "index": 5, "relevance_score": 0 },
+        { "index": 99, "relevance_score": 1 }
+      ]
+    }
+  }'
+```
+
+<Note>
+`score` and `weight` are **required** fields but not meaningful for reranker feedback—just use the defaults (`score: 0`, `weight: 1.0`). The important part is the `improvement` object with your corrected relevance scores. See [Feedback Signals API](/api-reference/endpoint/post_feedback) for full schema details.
+</Note>
+
+<Tip>
+- **Partial feedback is fine:** You don't need to provide feedback for every document—just the ones you want to correct.
+- **Incremental or batch:** You can send all corrections in one request, or send multiple requests over time. We handle aggregation automatically.
+</Tip>
+
+---
+
+## Training Data Format
+
+Reranker training in Datawizz uses the **Swift** worker. You provide data in the **Datawizz format** (one sample per row in your dataset or in a JSON/JSONL file). Each sample has `input` (query + document) and `output` (relevance label).
+
+### Per-sample structure
+
+Each training example must have:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `input` | array | Exactly two messages: **system** = query (or `<Instruct>`+`<Query>` tags), **user** = document (or `<Document>` tag). |
+| `output` | object | Single message with **role** `"assistant"` and **content** = relevance label (see below). |
+| `id` | string | Optional; preserved for tracking. |
+
+**Query and document:**
+
+- **`input[0]`**: `{ "role": "system", "content": "..." }` — the search query, or `<Instruct>` + `<Query>` tags for Qwen3 format.
+- **`input[1]`**: `{ "role": "user", "content": "..." }` — the document to be judged, or `<Document>` tag for Qwen3 format.
+
+<Info>
+**Recommendation (Qwen3-Reranker):** Use the same `<Instruct>/<Query>/<Document>` tag format in training data as at inference. This aligns training with how you call the model and may improve fine-tuning results. The simplified format (plain query in system, plain document in user) also works.
+
+Use the default Instruct `"Given a web search query, retrieve relevant passages that answer the query"` or customize it for your specific task.
+</Info>
+
+**Relevance label (`output.content`):**
+
+- **Pointwise (default, `loss_type: "pointwise_reranker"`)**: Binary 0/1.
+  - **Text**: `"Yes"`, `"True"`, `"1"`, `"relevant"` → 1; anything else (e.g. `"No"`, `"False"`, `"0"`) → 0.
+  - **Numeric**: Value in [0, 1]; ≥ 0.5 → 1, &lt; 0.5 → 0.
+- **MSE (`loss_type: "mse"`)**: Continuous score in [0, 1].
+  - **Text**: `"Yes"` / `"True"` / `"1"` / `"relevant"` → 1.0; `"No"` / `"False"` / `"0"` → 0.0; otherwise 0.5.
+  - **Numeric**: Clamped to [0, 1] and used as the target.
+
+### Sample training file (Datawizz format)
+
+Datawizz supports importing reranker training data **only in JSONL format** (one JSON object per line). A JSON array is not supported for import. Each line must be a single object with the structure below.
+
+**Example JSONL — Qwen3 format (recommended):**
+
+```jsonl
+{"id":"sample-001","input":[{"role":"system","content":"<Instruct>: Given a web search query, retrieve relevant passages that answer the query\n<Query>: What is Python async programming?"},{"role":"user","content":"<Document>: asyncio is Python's asynchronous I/O framework, supporting coroutines and event loops."}],"output":{"role":"assistant","content":"Yes"}}
+{"id":"sample-002","input":[{"role":"system","content":"<Instruct>: Given a web search query, retrieve relevant passages that answer the query\n<Query>: What is Python async programming?"},{"role":"user","content":"<Document>: Java is an object-oriented programming language."}],"output":{"role":"assistant","content":"No"}}
+{"id":"sample-003","input":[{"role":"system","content":"<Instruct>: Given a web search query, retrieve relevant passages that answer the query\n<Query>: What is machine learning?"},{"role":"user","content":"<Document>: Machine learning is a subset of AI that enables systems to learn from data."}],"output":{"role":"assistant","content":0.9}}
+```
+
+**Example JSONL — Simplified format (also works):**
+
+```jsonl
+{"id":"sample-001","input":[{"role":"system","content":"What is Python async programming?"},{"role":"user","content":"asyncio is Python's asynchronous I/O framework, supporting coroutines and event loops."}],"output":{"role":"assistant","content":"Yes"}}
+{"id":"sample-002","input":[{"role":"system","content":"What is Python async programming?"},{"role":"user","content":"Java is an object-oriented programming language."}],"output":{"role":"assistant","content":"No"}}
+```
+
+For **MSE** training, use continuous scores in `output.content`, e.g. `0.9`, `0.2`, or strings that map to 0.0/0.5/1.0 as above.
+
+### Training configuration (Swift reranker)
+
+When creating a reranker model in the app, you choose:
+
+- **Loss type**: `pointwise_reranker` (binary 0/1) or `mse` (regression in [0, 1]).
+- **Base models**: e.g. Qwen3-Reranker-0.6B/4B, bge-reranker-v2-m3, gte-reranker-modernbert-base.
+
+Other Swift parameters (epochs, batch size, max sequence length, LoRA, etc.) are documented in [Training Parameters](/models/training-parameters). Rerankers typically use a larger **max sequence length** (e.g. 8192) to include full documents.
+
+---
+
+## Summary
+
+| Use case | Request / data | Response / label |
+|----------|-----------------|------------------|
+| **Inference** | Chat completion: `messages` = system (query or `<Instruct>`/`<Query>` tags) + user (documents or `<Document>` tags) | `choices[0].message.content` = JSON string of `[{index, relevance_score}, ...]` |
+| **Feedback** | POST `/{project_uid}/{endpoint_uid}/feedback/{inference_log_id}` with `improvement` containing corrected scores | — |
+| **Training** | Datawizz format: `input` = [system=query/tags, user=document/tags], `output` = assistant content = "Yes"/"No" or 0/1 or float [0,1] | N/A (labels define relevance for training) |
+
+Ensure inference requests use one system and one user message; ensure training data uses exactly two `input` messages (system then user) and one `output` with the appropriate label type for your chosen `loss_type`.
