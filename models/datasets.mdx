@@ -104,7 +104,7 @@ Each item can hold multiple outputs - essential for preference-based training:
 
 - SFT - Single output per item. No tags needed, or choose your output based on a specific tag.
 - DPO - Two outputs per item tagged chosen and rejected.
-- KTO - One output tag plus a score threshold. Run Annotate Dataset first to attach scores.
+- KTO - One output tag plus a score threshold. Scores come from importing logs that already have feedback (collected via the feedback API), or by running Annotate Dataset.
 - GRPO - Scored outputs for group-relative optimization.
 
 Manage tags per-item via the + button in the Tags column. When multiple output tags exist, the Items table shows one column per tag.
