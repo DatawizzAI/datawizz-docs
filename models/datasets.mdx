@@ -2,266 +2,112 @@
 title: 'Datasets'
 description: 'Create, import, and manage datasets for training and evaluation'
 ---
-
-Datasets are the core building blocks for [model training](/models/training-models) and evaluation in Datawizz. A dataset is a collection of **items**, where each item has an **input** (prompt or message history) and one or more **outputs** (model responses). Outputs can carry **tags** (e.g. `chosen`, `rejected`) and **evaluator scores**, which feed directly into SFT, DPO, KTO, and GRPO training workflows.
+Datasets are the core building blocks for [model training](/models/training-models) and evaluation in Datawizz. A dataset is a collection of items, where each item has an input (prompt or message history) and one or more outputs (model responses). Outputs can carry tags (e.g. chosen, rejected) and evaluator scores, which feed directly into SFT, DPO, KTO, and GRPO training workflows.
 
 ## Create a dataset
 
-Navigate to **Datasets** in your project sidebar and click **+ Create Dataset** in the top-right corner. Provide a name (required) and an optional description, then confirm. You'll land on the empty dataset page, ready to import data.
-
-{/*
-  GIF: create-dataset.gif
-  Recording script:
-  1. Start on the Datasets list page (sidebar > Datasets is highlighted)
-  2. Click "+ Create Dataset" button in the top-right corner
-  3. Modal appears — type "My New Dataset" in the Dataset Name field
-  4. Type "Training data for customer support" in the Description field
-  5. Click "Create Dataset" button
-  6. Page navigates to the new empty dataset detail page
-*/}
-<Frame>
-  <img src="/images/datasets/create-dataset.gif" alt="Creating a new dataset: click + Create Dataset, fill in name and description, then confirm" />
-</Frame>
+From the project sidebar, open **Datasets** and create a new dataset with a name and optional description. New datasets start empty; use the toolbar actions below to add data.
 
 ## Dataset list
 
-The Datasets page shows all datasets in the current project as a sortable table with columns for name, creation date, item count, size, and a **Manage →** link to open each dataset.
-
-{/*
-  GIF: dataset-list.gif
-  Recording script:
-  1. Start on the Datasets list page showing the table with multiple datasets
-  2. Click the "Name" column header to sort by name
-  3. Click the "Items" column header to sort by item count
-  4. Hover over "Manage →" on one of the rows to highlight it
-  5. Click "Manage →" to navigate into the dataset detail page
-*/}
-<Frame>
-  <img src="/images/datasets/dataset-list.gif" alt="Dataset list page: sort columns, then click Manage to open a dataset" />
-</Frame>
+The list view shows all datasets in the project: name, creation time, item count, size, and a **Manage** link to open each dataset. The table is sortable by column.
 
 ## Inside a dataset
 
-Click **Manage →** to enter a dataset. The page has a toolbar across the top and three tabs: **Items**, **Stats**, and **Jobs**.
+After opening a dataset, the page has a top toolbar and three tabs: **Items**, **Stats**, and **Jobs**.
 
-### Items tab
+The dataset detail page has three tabs:
 
-The default view. A paginated table of every item in the dataset:
+- **Items** — A paginated table of every sample. Each row shows ID, created time, tags, input (user prompt), and output (model response). You can edit input/output in place, manage tags, and use the row menu for actions like adding outputs or deleting an item.
+- **Stats** — A token-length histogram and summary stats (min, P95, P99, max) to help you set `max_seq_length` for training.
+- **Jobs** — Lists all background jobs (uploads, imports, exports, annotations, regenerations) with their status (Done / Failed / In Progress), progress, and timestamps. Expand a row for logs and details; completed export files are downloadable here.
 
-- **ID** — Unique identifier (click to copy).
-- **Created** — Timestamp of when the item was added.
-- **Tags** — Click `+` to assign tags from existing ones (e.g. `ignored`) or create a new tag.
-- **Input** — The user prompt. Click to open the **Edit Input** modal (supports View / Edit modes).
-- **Output** — The assistant response. Click to view or edit.
-
-Use the **⋮** menu on each row for per-item actions like deleting an item or adding outputs.
-
-{/*
-  GIF: dataset-items.gif
-  Recording script:
-  1. Start on the dataset detail page, Items tab is active, showing the item table
-  2. Click on an Input cell (e.g. "Give me a recipe for ch…") — Edit Input modal opens showing the full message
-  3. Close the modal (click X)
-  4. Click the "+" button in the Tags column of a row — dropdown appears with "Existing Tags: ignored" and "New tag..."
-  5. Close the dropdown (press Escape)
-  6. Click "Next" at the bottom to go to page 2
-  7. Click "Previous" to go back to page 1
-*/}
 <Frame>
-  <img src="/images/datasets/dataset-items.gif" alt="Items tab: click an input to view it, add tags with the + button, paginate through items" />
-</Frame>
-
-### Stats tab
-
-A token-length histogram to help you choose `max_seq_length` when configuring training.
-
-{/*
-  GIF: dataset-stats.gif
-  Recording script:
-  1. Start on the dataset detail page, click "Stats" tab
-  2. Histogram loads showing the length distribution — pause to show summary bar (Items: 400, Min: 123, P95: 396, P99: 419, Max: 419)
-  3. Click the "Total (input + outputs)" dropdown in top-right, select a different option (e.g. Input only)
-  4. Histogram updates
-  5. Drag the left handle of the "Keep window" slider inward to narrow the range (e.g. from 123 to ~200)
-  6. The "Apply ignored tag to outliers" button updates to show the count of outliers
-  7. (Optional) Click "Restore ignored" to reset
-*/}
-<Frame>
-  <img src="/images/datasets/dataset-stats.gif" alt="Stats tab: view token length histogram, switch between total/input/output, adjust keep window slider to identify outliers" />
-</Frame>
-
-### Jobs tab
-
-Tracks background jobs for this dataset — uploads, exports, annotations, and regenerations. Each row shows type, status (`Done` / `Failed` / `In Progress`), progress, and timestamps. Expand a row for details. Completed export files are downloadable here.
-
-{/*
-  GIF: dataset-jobs.gif
-  Recording script:
-  1. Start on the dataset detail page, click "Jobs" tab
-  2. Table loads showing job list with Type, Status (Done/Failed badges), Progress, Created, Started, Completed columns
-  3. Click the expand arrow ">" on one of the "Done" upload rows to show job details
-  4. Collapse it again
-*/}
-<Frame>
-  <img src="/images/datasets/dataset-jobs.gif" alt="Jobs tab: view job list with status badges, expand a row to see details" />
+  <video src="/images/datasets/dataset-stats.mp4" width="100%" controls playsInline />
 </Frame>
 
 ---
 
 ## Toolbar actions
 
-### Import File
+### Import Logs
 
-Upload CSV, JSONL, or Parquet files into the dataset.
+**Import Logs** pulls inference requests from your Datawizz endpoints into the dataset. You can filter by endpoint, model, feedback signals, tags, and more; use the Query tab for advanced filters or the Views tab for saved presets. Selected logs are imported as dataset items (input + output).
 
-{/*
-  GIF: import-file.gif
-  Recording script:
-  1. Start on the dataset detail page (Items tab)
-  2. Click "Import File" button in the toolbar
-  3. "Upload Files" modal appears — shows file picker, Format dropdown (set to "Text"), and System Message field
-  4. Click the Format dropdown to reveal options: Text, Full, Data, OpenAI
-  5. Select "OpenAI"
-  6. Helper text below updates
-  7. Click "Cancel" to close
-*/}
 <Frame>
-  <img src="/images/datasets/import-file.gif" alt="Import File: open modal, browse format options (Text, Full, Data, OpenAI), see helper text update" />
+  <video src="/images/datasets/import-logs.mp4" width="100%" controls playsInline />
 </Frame>
 
-Select one or more files (all must share the same format), then choose a **Format**:
+### Import File
+
+**Import File** uploads data from CSV, JSONL, or Parquet. You pick a format (Text, Full, Data, or OpenAI) and optionally a system message; preview is available before confirming. Supported formats:
 
 | Format | Description |
 |--------|-------------|
-| **Text** | Input and output are plain strings. Auto-wrapped into chat format (`user` / `assistant` roles). |
-| **Full** | Input is a JSON array of `{"role", "content"}` messages; output is a single `{"role", "content"}` object. |
-| **Data** | Raw data columns — you map fields manually in the next step. |
-| **OpenAI** | Compatible with OpenAI's `messages` array format. |
+| Text | Input and output are plain strings; auto-wrapped into chat format. |
+| Full | Input is a JSON array of {"role", "content"} messages; output is a single message. |
+| Data | Raw columns; you map fields in the next step. |
+| OpenAI | OpenAI-style messages array. |
 
-Optionally provide a **System Message** that gets prepended to every input. Click **Preview** to inspect parsed data before confirming.
-
-### Import Logs
-
-Pull inference requests from your Datawizz endpoints directly into the dataset.
-
-{/*
-  GIF: import-logs.gif
-  Recording script:
-  1. Start on the dataset detail page (Items tab)
-  2. Click "Import Logs" button in the toolbar
-  3. Full-screen "Import Logs" modal opens — shows Filters tab with dropdowns (Status, Endpoints, Provider Models, Feedback Signals, Tags, Exclude Tags) and a table of logs
-  4. Click the "Endpoints" dropdown to show available endpoints
-  5. Close the dropdown
-  6. Click the "Query" tab to show the advanced query interface
-  7. Click the "Views" tab to show saved views
-  8. Click back to "Filters" tab
-  9. Close the modal (click X)
-*/}
 <Frame>
-  <img src="/images/datasets/import-logs.gif" alt="Import Logs: open modal, browse filter dropdowns, switch between Filters / Query / Views tabs" />
+  <video src="/images/datasets/import-file.mp4" width="100%" controls playsInline />
 </Frame>
-
-Filter by Status, Endpoints, Provider Models, Feedback Signals, Tags, and Exclude Tags. Switch to the **Query** tab for advanced filtering or the **Views** tab for saved presets. Select the logs you want and run the import.
 
 ### Create Split
 
-Split the dataset into two parts (e.g. 80/20 for train/eval). Adjust the **Split Ratio** slider (default 0.2), name the split, and confirm. The resulting datasets can be referenced in training and evaluation configs.
+**Create Split** divides the dataset into two parts (e.g. 80/20 for train/eval). You set the split ratio and name the new datasets; they can then be used in training and evaluation configs.
 
-{/*
-  GIF: create-split.gif
-  Recording script:
-  1. Start on the dataset detail page
-  2. Click "Create Split" button in the toolbar
-  3. "Create Split" modal appears — shows Split Ratio slider (default 0.2), Name field pre-filled
-  4. Drag the slider to change the ratio (e.g. to ~0.3)
-  5. Click "Cancel" to close
-*/}
 <Frame>
-  <img src="/images/datasets/create-split.gif" alt="Create Split: open modal, adjust split ratio slider, see auto-generated name" />
+  <video src="/images/datasets/create-split.mp4" width="100%" controls playsInline />
 </Frame>
 
 ### Annotate Dataset
 
-Run evaluators on every item's outputs to attach scores. Select from project-level or public evaluators (Code-based or LLM-as-Judge), then start the annotation job. Scores appear as badges on the Items table and can be used for KTO training or evaluation workflows.
+**Annotate Dataset** runs evaluators on each item’s outputs and attaches scores. You choose evaluators, set weights, and start the job; scores show on the Items table and can drive KTO training or evaluation.
 
-{/*
-  GIF: annotate-dataset.gif
-  Recording script:
-  1. Start on the dataset detail page
-  2. Click "Annotate Dataset" button in the toolbar
-  3. "Annotate Dataset" modal opens — shows search bar, tabs (All / Project / Public), and evaluator list
-  4. Click "Project (3)" tab to filter to project evaluators
-  5. Click "Public (12)" tab to show public evaluators
-  6. Click back to "All (15)"
-  7. Type "BLEU" in the search bar to filter the list
-  8. Check the checkbox next to "BLEU" evaluator
-  9. Close the modal
-*/}
 <Frame>
-  <img src="/images/datasets/annotate-dataset.gif" alt="Annotate Dataset: open modal, switch between All/Project/Public tabs, search and select an evaluator" />
+  <video src="/images/datasets/annotate-dataset.mp4" width="100%" controls playsInline />
 </Frame>
 
 ### Regen Outputs
 
-Generate new assistant responses for all items using a different model. New outputs are **appended** to existing ones — nothing is overwritten.
+**Regen Outputs** generates new assistant responses for all items with a chosen model. New outputs are added alongside existing ones. You configure provider/model (temperature, max tokens, etc.) and at least one output tag. Optional: a regeneration instruction and context mode (instruction + original input, or also include a selected output column for improvement-style prompts).
 
-{/*
-  GIF: regen-outputs.gif
-  Recording script:
-  1. Start on the dataset detail page
-  2. Click "Regen Outputs" button in the toolbar
-  3. "Regenerate Outputs" modal opens — shows Provider dropdown, Model Configuration section, Output Tags input, and Regeneration Prompt Builder
-  4. Click the Provider dropdown to show available providers
-  5. Type "gpt-4o" in the Output Tags field and click "Add"
-  6. Type "Improve factual accuracy" in the Regeneration Prompt Builder text area
-  7. Show the two radio options: "Instruction + Original Input" (selected) and "Instruction + Original Input + Selected Output Column"
-  8. Close the modal
-*/}
 <Frame>
-  <img src="/images/datasets/regen-outputs.gif" alt="Regen Outputs: open modal, select provider, add output tag, write regeneration prompt instruction" />
+  <video src="/images/datasets/regen-outputs.mp4" width="100%" controls playsInline />
 </Frame>
-
-Configure the **Provider** and **Model Configuration** (temperature, max tokens, etc.). Assign at least one **Output Tag** to label the generated outputs (e.g. the model name). Optionally write a **Regeneration Prompt Builder** instruction and choose a context mode:
-
-- **Instruction + Original Input** — Sends your instruction with the original input.
-- **Instruction + Original Input + Selected Output Column** — Also includes an existing output for reference (useful for improvement-style regeneration).
 
 ### Export Dataset
 
-Kicks off a background export. Download the resulting JSONL/CSV from the **Jobs** tab once complete.
+**Export Dataset** starts a background job that exports the dataset to JSONL or CSV. When the job finishes, the file appears in the **Jobs** tab and can be downloaded from there. The video below shows starting an export and finding the completed file in the Jobs tab.
 
 {/*
-  GIF: export-dataset.gif
-  Recording script:
-  1. Start on the dataset detail page
-  2. Click "Export Dataset" button in the toolbar
-  3. "Export Dataset" modal appears — shows message "This export will run in the background. Download JSONL/CSV from the Jobs tab when done."
-  4. Click "Cancel" to close
+  MP4: export-dataset.mp4
 */}
 <Frame>
-  <img src="/images/datasets/export-dataset.gif" alt="Export Dataset: open modal showing background export confirmation" />
+  <video src="/images/datasets/export-dataset.mp4" width="100%" controls playsInline />
 </Frame>
 
 ### Edit
 
-Update name and description. If the dataset has evaluator scores, configure **Scorer Weights** and toggle **Normalize** to build a composite score.
+**Edit** lets you change the dataset name and description. If the dataset has evaluator scores, you can set Scorer Weights and Normalize to build a composite score.
 
-### Delete
-
-Permanently deletes the dataset. **This cannot be undone.**
+<Frame>
+  <video src="/images/datasets/edit-dataset.mp4" width="100%" controls playsInline />
+</Frame>
 
 ---
 
 ## Outputs, tags, and scores
 
-Each item can hold multiple outputs — essential for preference-based training:
+Each item can hold multiple outputs - essential for preference-based training:
 
-- **SFT** — Single output per item. No tags needed.
-- **DPO** — Two outputs per item tagged `chosen` and `rejected`.
-- **KTO** — One output tag plus a score threshold. Run **Annotate Dataset** first to attach scores.
-- **GRPO** — Scored outputs for group-relative optimization.
+- SFT - Single output per item. No tags needed.
+- DPO - Two outputs per item tagged chosen and rejected.
+- KTO - One output tag plus a score threshold. Run Annotate Dataset first to attach scores.
+- GRPO - Scored outputs for group-relative optimization.
 
-Manage tags per-item via the `+` button in the Tags column. When multiple output tags exist, the Items table shows one column per tag.
+Manage tags per-item via the + button in the Tags column. When multiple output tags exist, the Items table shows one column per tag.
 
 See [Model Training](/models/training-models) for full trainer configuration.
 
@@ -269,7 +115,7 @@ See [Model Training](/models/training-models) for full trainer configuration.
 
 ## Adding data from Logs
 
-You can also add data directly from the **Logs** page. Select rows and click **Add to Dataset**. Choose how to handle improvements: ignore them, use as the primary output, or add as a separate output (useful for building DPO pairs).
+You can also add data directly from the Logs page. Select rows and click Add to Dataset. Choose how to handle improvements: ignore them, use as the primary output, or add as a separate output (useful for building DPO pairs).
 
 ---
 
@@ -277,7 +123,7 @@ You can also add data directly from the **Logs** page. Select rows and click **A
 
 <AccordionGroup>
   <Accordion title="Langfuse">
-    Export from Langfuse and use **Import File** — Datawizz supports the native Langfuse format. See the [video walkthrough](https://www.youtube.com/watch?v=hs-fVDNmL-c).
+    Export from Langfuse and use Import File - Datawizz supports the native Langfuse format. See the [video walkthrough](https://www.youtube.com/watch?v=hs-fVDNmL-c).
   </Accordion>
   <Accordion title="LangSmith">
     Use the Datawizz export script to produce a CSV in OpenAI format, then import. See the [LangSmith guide](/integrations/langsmith).
@@ -286,6 +132,6 @@ You can also add data directly from the **Logs** page. Select rows and click **A
     Use this [Colab notebook](https://colab.research.google.com/drive/1lafP6s72-V1ntc7SZhgMNQSvFKH5TJK8?usp=sharing) to export into a Datawizz-compatible CSV.
   </Accordion>
   <Accordion title="Other tools">
-    Convert your data to CSV or JSONL with `input` and `output` columns (plain text or chat-format JSON) and use **Import File**.
+    Convert your data to CSV or JSONL with input and output columns (plain text or chat-format JSON) and use Import File.
   </Accordion>
 </AccordionGroup>
