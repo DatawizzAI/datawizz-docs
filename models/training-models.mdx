@@ -9,6 +9,55 @@ This tutorial will take you through the steps to train & deploy your first speci
 
 This tutorial assumes you already have a project set up on Datawizz with some logs saved which we will train the new model from.
 
+# Training Methods
+
+Datawizz supports multiple training methods to fine-tune your language models:
+
+| Method | Description | Use Case |
+|--------|-------------|----------|
+| **SFT** (Supervised Fine-Tuning) | Standard fine-tuning on input-output pairs | General task adaptation |
+| **GRPO** | Generalized Reward-based Policy Optimization | Reinforcement learning from human feedback |
+| **Reranker** | Training models to rank responses | Response ranking and selection |
+| **DPO** (Direct Preference Optimization) | Training on preference pairs without reward modeling | Aligning models with human preferences |
+| **KTO** (Kahneman-Tversky Optimization) | Preference learning using individual feedback scores | Learning from scored outputs without pairs |
+
+## DPO Training
+
+DPO (Direct Preference Optimization) allows you to train models on preference data where you have pairs of chosen and rejected responses. This method is useful for aligning models with human preferences without requiring a separate reward model.
+
+### Setting up DPO Training
+
+1. **Select DPO Method**: When creating a new model, select "DPO" as your training method
+2. **Configure Tags**: You'll need to specify:
+   - **Chosen Tag**: The tag that marks preferred responses in your dataset
+   - **Rejected Tag**: The tag that marks less preferred responses in your dataset
+3. **Data Requirements**: Your dataset items must have outputs tagged with both chosen and rejected labels
+
+### DPO Data Format
+
+For DPO training, each dataset item should contain multiple outputs with appropriate tags:
+- Outputs tagged as "chosen" represent the preferred responses
+- Outputs tagged as "rejected" represent the less preferred responses
+- Each output must have exactly one tag for proper DPO training
+
+## KTO Training
+
+KTO (Kahneman-Tverzy Optimization) enables preference learning from individual feedback scores rather than paired preferences. This method is ideal when you have scored outputs but don't have explicit preference pairs.
+
+### Setting up KTO Training
+
+1. **Select KTO Method**: Choose "KTO" as your training method when creating a new model
+2. **Configure Output Tag**: Specify which output tag contains your scored data
+3. **Score Requirements**: Your outputs should include feedback scores that KTO can use to determine preferences
+
+### KTO Data Format
+
+For KTO training:
+- Outputs should contain feedback scores in the `feedback.scores` field
+- Scores are aggregated using a weighted average
+- Scores ≥ 0.5 are treated as positive examples, < 0.5 as negative
+- Only outputs with usable feedback scores are included in training
+
 # Training a Model
 
 To train a model, head to the models section of your project and click "+ New Model":
