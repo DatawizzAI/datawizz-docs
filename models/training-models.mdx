@@ -19,7 +19,34 @@ In the new model page, follow the on-screen instructions to configure the base m
 
 ![Configure Model](/images/training-models/model-config-1.png)
 
-Once you create the model, the training process will start. You can monitor training progress and logs in the model page. Note that model training can take a few minutes to a few hours, depending on the size of the training configurations you use.
+## Training Methods
+
+Datawizz supports multiple training methods:
+
+- **SFT** (Supervised Fine-Tuning): Standard fine-tuning approach for general instruction following
+- **GRPO**: Goal-based training method for specific objectives
+- **DPO** (Direct Preference Optimization): Training with preference pairs using chosen and rejected responses
+- **Reranker**: Training models to rank and reorder outputs
+
+### DPO Training
+
+When selecting DPO as your training method, you'll need to configure chosen and rejected tags:
+
+- **Chosen Tag**: Select the output tag that represents preferred responses
+- **Rejected Tag**: Select the output tag that represents less preferred responses
+
+Make sure your dataset contains outputs with both chosen and rejected tags for DPO training to work properly.
+
+## Training Parameters
+
+The training configuration includes several parameters with validation:
+
+- **Validation Split**: Must be between 0 and 1 (represents the proportion of data used for validation)
+- **Maximum Sequence Length**: Must be a positive integer when specified
+- **Number of Epochs**: Range from 1 to 100
+- **Learning Rate**: Range from 0.00001 to 0.1
+
+Once you create the model, the training process will start. You can monitor training progress and logs in the model page, including dataset loading progress. Note that model training can take a few minutes to a few hours, depending on the size of the training configurations you use.
 
 ![Model Training](/images/training-models/model-training-1.png)
 
