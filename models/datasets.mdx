@@ -1,3 +1,11 @@
+Looking at the merged PRs, I can see several changes that affect the datasets documentation:
+
+1. **PR #137**: Added validation requiring dataset names (rejecting empty/whitespace names)
+2. **PR #133**: Added support for multiple file uploads with cross-file validation
+3. **PR #128**: Added DPO training method support which affects how datasets are used for training
+
+These changes directly impact the dataset creation and import functionality described in the documentation.
+
 ---
 title: 'Datasets'
 description: 'Importing and managing datasets in Datawizz'
@@ -9,7 +17,7 @@ Datasets can be helpful for creating consistent sets of data to train with, or t
 
 ## Creating a Dataset
 
-To create a dataset, navigate to the `Datasets` tab in the Datawizz dashboard and click on the `Create Dataset` button. You can choose a name for your new dataset and a description to help you remember what it's for.
+To create a dataset, navigate to the `Datasets` tab in the Datawizz dashboard and click on the `Create Dataset` button. You must provide a name for your new dataset (names cannot be empty or contain only whitespace) and optionally add a description to help you remember what it's for.
 
 ![Datasets](/images/datasets/datasets-1.png)
 
@@ -19,9 +27,9 @@ Once inside your dataset, you can click `Import Logs` to import logs from Datawi
 
 ![Datasets](/images/datasets/datasets-logs-1.png)
 
-## Importing Logs from a CSV File
+## Importing Logs from CSV Files
 
-You can also import logs from a CSV file. Click on `Import CSV` and select a file to upload. The file must include `input` and `output` columns, where `input` is the message(s) sent to the model and `output` is the response.
+You can import logs from CSV files by clicking on `Import CSV` and selecting one or more files to upload. Multiple files can be uploaded simultaneously as long as they share the same format and structure. Each file must include `input` and `output` columns, where `input` is the message(s) sent to the model and `output` is the response.
 
 Datawizz support two formats for the `input` and `output` columns:
 
@@ -38,6 +46,8 @@ Datawizz support two formats for the `input` and `output` columns:
     ```json
     {"content": "I am a ...", "role": "assistant"}
     ```
+
+When uploading multiple files, Datawizz will validate that all files have compatible formats and schemas before processing them together.
 
 ![Datasets](/images/datasets/datasets-csv-1.png)
 
