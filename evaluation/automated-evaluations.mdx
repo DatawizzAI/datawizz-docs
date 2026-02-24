@@ -15,7 +15,7 @@ To create an evaluation, head over to the evaluations section in the Datawizz da
 
 Here you'll need to configure your evaluation with the following settings:
 
-- **Name**: A name for your evaluation. This is for your reference and will be displayed in the dashboard.
+- **Name**: A name for your evaluation. This is for your reference and will be displayed in the dashboard. *This field is required.*
 - **Models**: The models you want to evaluate. You can select multiple models from the same provider or different providers. (note that models you train must be deployed before they can be evaluated)
 - **Data**: Select the logs you want to use for evaluation. You can use tags and other filters to select the logs you want to use.
     - If you are training custom models, you may want to reserve some logs for evaluation to ensure you are not testing on the same data you trained on. You can do this by tagging some logs with `test` and excluding them from the training data when you initiate a model training.
@@ -27,6 +27,8 @@ Here you'll need to configure your evaluation with the following settings:
 ## Viewing evaluation results
 
 Once you've created an evaluation, you can view the results in the evaluation details page. Here you'll see a summary of the evaluation, including the evaluation function used, the number of samples evaluated, and the evaluation metrics. You will also be able to see individual responses from each model and compare them side-by-side.
+
+Evaluation scores are automatically normalized and displayed on a scale from 0 to 1 for consistent comparison across different metrics.
 
 ![Evaluation Results](/images/evaluation/evaluation-results-1.png) 
 
@@ -243,4 +245,3 @@ def json_compare(baseline_output, new_output):
 def evaluator(inputs: list, outputs: dict, reference_outputs: dict):
     return json_compare(reference_outputs['content'], outputs['content'])
 ```
-
