@@ -1,59 +1,137 @@
 ---
 title: 'Datasets'
-description: 'Importing and managing datasets in Datawizz'
+description: 'Create, import, and manage datasets for training and evaluation'
+---
+Datasets are the core building blocks for [model training](/models/training-models) and evaluation in Datawizz. A dataset is a collection of items, where each item has an input (prompt or message history) and one or more outputs (model responses). Outputs can carry tags (e.g. chosen, rejected) and evaluator scores, which feed directly into SFT, DPO, KTO, and GRPO training workflows.
+
+## Create a dataset
+
+From the project sidebar, open **Datasets** and create a new dataset with a name and optional description. New datasets start empty; use the toolbar actions below to add data.
+
+## Dataset list
+
+The list view shows all datasets in the project: name, creation time, item count, size, and a **Manage** link to open each dataset. The table is sortable by column.
+
+## Inside a dataset
+
+After opening a dataset, the page has a top toolbar and three tabs: **Items**, **Stats**, and **Jobs**.
+
+The dataset detail page has three tabs:
+
+- **Items** — A paginated table of every sample. Each row shows ID, created time, tags, input (user prompt), and output (model response). You can edit input/output in place, manage tags, and use the row menu for actions like adding outputs or deleting an item.
+- **Stats** — A token-length histogram and summary stats (min, P95, P99, max) to help you set `max_seq_length` for training.
+- **Jobs** — Lists all background jobs (uploads, imports, exports, annotations, regenerations) with their status (Done / Failed / In Progress), progress, and timestamps. Expand a row for logs and details; completed export files are downloadable here.
+
+<Frame>
+  <video src="/images/datasets/dataset-stats.mp4" width="100%" controls playsInline />
+</Frame>
+
 ---
 
-Datawizz let's you create datasets of LLM logs - either from requests recorded on DataWizz endpoints or from logs uploaded to the platform. You can use these datasets to train and evaluate logs.
+## Toolbar actions
 
-Datasets can be helpful for creating consistent sets of data to train with, or to import existing data from other systems.
+### Import Logs
 
-## Creating a Dataset
+**Import Logs** pulls inference requests from your Datawizz endpoints into the dataset. You can filter by endpoint, model, feedback signals, tags, and more; use the Query tab for advanced filters or the Views tab for saved presets. Selected logs are imported as dataset items (input + output).
 
-To create a dataset, navigate to the `Datasets` tab in the Datawizz dashboard and click on the `Create Dataset` button. You can choose a name for your new dataset and a description to help you remember what it's for.
+<Frame>
+  <video src="/images/datasets/import-logs.mp4" width="100%" controls playsInline />
+</Frame>
 
-![Datasets](/images/datasets/datasets-1.png)
+### Import File
 
-## Importing Datawizz Logs
+**Import File** uploads data from CSV, JSONL, or Parquet. You pick a format (Text, Full, Data, or OpenAI) and optionally a system message; preview is available before confirming. Supported formats:
 
-Once inside your dataset, you can click `Import Logs` to import logs from Datawizz endpoints. You can use the filters there to narrow down the logs that'll be imported. 
+| Format | Description |
+|--------|-------------|
+| Text | Input and output are plain strings; auto-wrapped into chat format. |
+| Full | Input is a JSON array of {"role", "content"} messages; output is a single message. |
+| Data | Raw columns; you map fields in the next step. |
+| OpenAI | OpenAI-style messages array. |
 
-![Datasets](/images/datasets/datasets-logs-1.png)
+<Frame>
+  <video src="/images/datasets/import-file.mp4" width="100%" controls playsInline />
+</Frame>
 
-## Importing Logs from a CSV File
+### Create Split
 
-You can also import logs from a CSV file. Click on `Import CSV` and select a file to upload. The file must include `input` and `output` columns, where `input` is the message(s) sent to the model and `output` is the response.
+**Create Split** divides the dataset into two parts (e.g. 80/20 for train/eval). You set the split ratio and name the new datasets; they can then be used in training and evaluation configs.
 
-Datawizz support two formats for the `input` and `output` columns:
+<Frame>
+  <video src="/images/datasets/create-split.mp4" width="100%" controls playsInline />
+</Frame>
 
-- **text** - in this mode, the column should contain the raw text of the message. Datawizz will automaticall format the input message with the role 'user' and the output message with the role 'assistant'.
-- **full** - in this mode, the column should contain the full JSON object of the message. This allows you to specify the role and other metadata for the message.
-    - The input column should be a JSON array of objects, where each object has a `content` field and a `role` field. For example:
-    ```json
-    [
-        {"content": "You are a ...", "role": "assistant"},
-        {"content": "Hi", "role": "user"}
-    ]
-    ```
-    - The output column should be a JSON object with a `content` field and a `role` field. For example:
-    ```json
-    {"content": "I am a ...", "role": "assistant"}
-    ```
+### Annotate Dataset
 
-![Datasets](/images/datasets/datasets-csv-1.png)
+**Annotate Dataset** runs evaluators on each item’s outputs and attaches scores. You choose evaluators, set weights, and start the job; scores show on the Items table and can drive KTO training or evaluation.
 
-## Importing Logs from Other systems
+<Frame>
+  <video src="/images/datasets/annotate-dataset.mp4" width="100%" controls playsInline />
+</Frame>
 
-Here are some ways to import logs from other systems. If you are using a system that is not listed here, you can still import logs by converting them to the CSV format described above - please share your use case with us so we can better document the process!
+### Regen Outputs
 
-### Humanloop
-We have created a notebook that exports the logs from [Humanloop](https://humanloop.com) to a Datawizz dataset CSV file. You can find the notebook [here](https://colab.research.google.com/drive/1lafP6s72-V1ntc7SZhgMNQSvFKH5TJK8?usp=sharing).
+**Regen Outputs** generates new assistant responses for all items with a chosen model. New outputs are added alongside existing ones. You configure provider/model (temperature, max tokens, etc.) and at least one output tag. Optional: a regeneration instruction and context mode (instruction + original input, or also include a selected output column for improvement-style prompts).
 
-### Langfuse
-You can export logs from [Langfuse](https://langfuse.com) to and import them into Datawizz. Datawizz supports the native export format from Langfuse making this simple.
+<Frame>
+  <video src="/images/datasets/regen-outputs.mp4" width="100%" controls playsInline />
+</Frame>
 
-See [our video tutorial](https://www.youtube.com/watch?v=hs-fVDNmL-c) for a full walkthrough of the process.
+### Export Dataset
 
-### LangSmith
-You can export traces from [LangSmith](https://smith.langchain.com) using our export script. The script outputs a CSV file with messages in OpenAI format, ready for import into Datawizz.
+**Export Dataset** starts a background job that exports the dataset to JSONL or CSV. When the job finishes, the file appears in the **Jobs** tab and can be downloaded from there. The video below shows starting an export and finding the completed file in the Jobs tab.
 
-See the [LangSmith integration guide](/integrations/langsmith) for details.
+{/*
+  MP4: export-dataset.mp4
+*/}
+<Frame>
+  <video src="/images/datasets/export-dataset.mp4" width="100%" controls playsInline />
+</Frame>
+
+### Edit
+
+**Edit** lets you change the dataset name and description. If the dataset has evaluator scores, you can set Scorer Weights and Normalize to build a composite score.
+
+<Frame>
+  <video src="/images/datasets/edit-dataset.mp4" width="100%" controls playsInline />
+</Frame>
+
+---
+
+## Outputs, tags, and scores
+
+Each item can hold multiple outputs - essential for preference-based training:
+
+- SFT - Single output per item. No tags needed, or choose your output based on a specific tag.
+- DPO - Two outputs per item tagged chosen and rejected.
+- KTO - One output tag plus a score threshold. Scores come from importing logs that already have feedback (collected via the feedback API), or by running Annotate Dataset.
+- GRPO - Scored outputs for group-relative optimization.
+
+Manage tags per-item via the + button in the Tags column. When multiple output tags exist, the Items table shows one column per tag.
+
+See [Model Training](/models/training-models) for full trainer configuration.
+
+---
+
+## Adding data from Logs
+
+You can also add data directly from the Logs page. Select rows and click Add to Dataset. Choose how to handle improvements: ignore them, use as the primary output, or add as a separate output (useful for building DPO pairs).
+
+---
+
+## Import from other tools
+
+<AccordionGroup>
+  <Accordion title="Langfuse">
+    Export from Langfuse and use Import File - Datawizz supports the native Langfuse format. See the [video walkthrough](https://www.youtube.com/watch?v=hs-fVDNmL-c).
+  </Accordion>
+  <Accordion title="LangSmith">
+    Use the Datawizz export script to produce a CSV in OpenAI format, then import. See the [LangSmith guide](/integrations/langsmith).
+  </Accordion>
+  <Accordion title="Humanloop">
+    Use this [Colab notebook](https://colab.research.google.com/drive/1lafP6s72-V1ntc7SZhgMNQSvFKH5TJK8?usp=sharing) to export into a Datawizz-compatible CSV.
+  </Accordion>
+  <Accordion title="Other tools">
+    Convert your data to CSV or JSONL with input and output columns (plain text or chat-format JSON) and use Import File.
+  </Accordion>
+</AccordionGroup>
